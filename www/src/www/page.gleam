@@ -93,15 +93,18 @@ fn add_header_anchors(html: String) -> String {
 
 /// Transform .md links to clean paths
 fn transform_links(html: String) -> String {
-  // Match href="./something.md" or href="something.md" and replace with href="/something"
-  let assert Ok(re) = regexp.from_string("href=\"(?:\\./)?([^\"]+)\\.md\"")
+  // Match href="./something.md" or href="something.md" with optional anchor, replace with clean path
+  let assert Ok(re) =
+    regexp.from_string("href=\"(?:\\./)?([^\"#]+)\\.md(#[^\"]*)?\"")
   regexp.match_map(re, html, fn(m) {
     case m.submatches {
-      [Some(filename)] ->
+      [Some(filename), anchor] -> {
+        let anchor_str = option.unwrap(anchor, "")
         case filename {
-          "README" -> "href=\"/\""
-          _ -> "href=\"/" <> filename <> "\""
+          "README" -> "href=\"/" <> anchor_str <> "\""
+          _ -> "href=\"/" <> filename <> anchor_str <> "\""
         }
+      }
       _ -> m.content
     }
   })
