@@ -48,6 +48,7 @@ pub const navigation: List(NavItem) = [
         #("guides/joins.md", "/guides/joins", "Joins"),
         #("guides/mutations.md", "/guides/mutations", "Mutations"),
         #("guides/moderation.md", "/guides/moderation", "Moderation"),
+        #("guides/notifications.md", "/guides/notifications", "Notifications"),
         #("guides/viewer-state.md", "/guides/viewer-state", "Viewer State"),
         #(
           "guides/authentication.md",
