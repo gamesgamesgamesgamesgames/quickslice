@@ -212,6 +212,7 @@ pub fn build_cursor_where_clause(
   decoded_cursor: DecodedCursor,
   sort_by: Option(List(#(String, String))),
   is_before: Bool,
+  start_index: Int,
 ) -> #(String, List(String)) {
   let sort_fields = case sort_by {
     None -> []
@@ -228,6 +229,7 @@ pub fn build_cursor_where_clause(
           decoded_cursor.field_values,
           decoded_cursor.cid,
           is_before,
+          start_index,
         )
 
       let sql = "(" <> string.join(clauses.0, " OR ") <> ")"
@@ -243,60 +245,77 @@ fn build_progressive_clauses(
   field_values: List(String),
   cid: String,
   is_before: Bool,
+  start_index: Int,
 ) -> #(List(String), List(String)) {
-  let #(clauses, params) =
-    list.index_map(sort_fields, fn(field, i) {
-      let #(equality_parts, equality_params) = case i {
-        0 -> #([], [])
+  // Build clauses with tracked parameter index
+  let #(clauses, params, next_index) =
+    list.index_fold(sort_fields, #([], [], start_index), fn(acc, field, i) {
+      let #(acc_clauses, acc_params, param_index) = acc
+
+      // Build equality parts for prior fields
+      let #(equality_parts, equality_params, idx_after_eq) = case i {
+        0 -> #([], [], param_index)
         _ -> {
-          list.range(0, i - 1)
-          |> list.fold(#([], []), fn(eq_acc, j) {
-            let #(eq_parts, eq_params) = eq_acc
-            let prior_field =
-              list_at(sort_fields, j) |> result.unwrap(#("", ""))
-            let value = list_at(field_values, j) |> result.unwrap("")
-
-            let field_ref = build_cursor_field_reference(exec, prior_field.0)
-            let new_part = field_ref <> " = ?"
-            let new_params = list.append(eq_params, [value])
-
-            #(list.append(eq_parts, [new_part]), new_params)
-          })
+          list.index_fold(
+            list.take(sort_fields, i),
+            #([], [], param_index),
+            fn(eq_acc, prior_field, j) {
+              let #(eq_parts, eq_params, eq_idx) = eq_acc
+              let value = list_at(field_values, j) |> result.unwrap("")
+              let field_ref = build_cursor_field_reference(exec, prior_field.0)
+              let placeholder = executor.placeholder(exec, eq_idx)
+              let new_part = field_ref <> " = " <> placeholder
+              #(
+                list.append(eq_parts, [new_part]),
+                list.append(eq_params, [value]),
+                eq_idx + 1,
+              )
+            },
+          )
         }
       }
 
       let value = list_at(field_values, i) |> result.unwrap("")
-
       let comparison_op = get_comparison_operator(field.1, is_before)
       let field_ref = build_cursor_field_reference(exec, field.0)
+      let placeholder = executor.placeholder(exec, idx_after_eq)
 
-      let comparison_part = field_ref <> " " <> comparison_op <> " ?"
+      let comparison_part =
+        field_ref <> " " <> comparison_op <> " " <> placeholder
       let all_parts = list.append(equality_parts, [comparison_part])
       let all_params = list.append(equality_params, [value])
 
       let clause = "(" <> string.join(all_parts, " AND ") <> ")"
 
-      #(clause, all_params)
+      #(
+        list.append(acc_clauses, [clause]),
+        list.append(acc_params, all_params),
+        idx_after_eq + 1,
+      )
     })
-    |> list.unzip
-    |> fn(unzipped) {
-      let flattened_params = list.flatten(unzipped.1)
-      #(unzipped.0, flattened_params)
-    }
 
-  let #(final_equality_parts, final_equality_params) =
-    list.index_map(sort_fields, fn(field, j) {
+  // Build final clause with all fields equal and CID comparison
+  let #(final_equality_parts, final_equality_params, idx_after_final_eq) =
+    list.index_fold(sort_fields, #([], [], next_index), fn(acc, field, j) {
+      let #(parts, params, idx) = acc
       let value = list_at(field_values, j) |> result.unwrap("")
       let field_ref = build_cursor_field_reference(exec, field.0)
-      #(field_ref <> " = ?", value)
+      let placeholder = executor.placeholder(exec, idx)
+      #(
+        list.append(parts, [field_ref <> " = " <> placeholder]),
+        list.append(params, [value]),
+        idx + 1,
+      )
     })
-    |> list.unzip
 
   let last_field = list.last(sort_fields) |> result.unwrap(#("", "desc"))
   let cid_comparison_op = get_comparison_operator(last_field.1, is_before)
+  let cid_placeholder = executor.placeholder(exec, idx_after_final_eq)
 
   let final_parts =
-    list.append(final_equality_parts, ["cid " <> cid_comparison_op <> " ?"])
+    list.append(final_equality_parts, [
+      "cid " <> cid_comparison_op <> " " <> cid_placeholder,
+    ])
   let final_params = list.append(final_equality_params, [cid])
 
   let final_clause = "(" <> string.join(final_parts, " AND ") <> ")"

@@ -552,6 +552,7 @@ pub fn get_by_collection_paginated(
               decoded_cursor,
               sort_by,
               !is_forward,
+              list.length(bind_values) + 1,
             )
 
           let new_where = list.append(where_parts, [cursor_where])
@@ -705,6 +706,7 @@ pub fn get_by_collection_paginated_with_where(
               decoded_cursor,
               sort_by,
               !is_forward,
+              list.length(bind_values) + 1,
             )
 
           let new_where = list.append(where_parts, [cursor_where])
@@ -946,6 +948,7 @@ pub fn get_by_reference_field_paginated(
               decoded_cursor,
               sort_by,
               !is_forward,
+              list.length(with_where_values) + 1,
             )
 
           let new_where = list.append(with_where_parts, [cursor_where])
@@ -1302,6 +1305,7 @@ pub fn get_by_dids_and_collection_paginated(
               decoded_cursor,
               sort_by,
               !is_forward,
+              list.length(with_where_values) + 1,
             )
 
           let new_where = list.append(with_where_parts, [cursor_where])
