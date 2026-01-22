@@ -364,16 +364,18 @@ fn build_single_condition(
 /// Builds WHERE clause SQL from a WhereClause
 /// Returns tuple of (sql_string, parameters)
 /// use_table_prefix: if True, prefixes table columns with "record." for joins
+/// start_index: the starting parameter index (1-based) for placeholders
 pub fn build_where_sql(
   exec: Executor,
   clause: WhereClause,
   use_table_prefix: Bool,
+  start_index: Int,
 ) -> #(String, List(Value)) {
   case is_clause_empty(clause) {
     True -> #("", [])
     False -> {
       let #(sql_parts, params, _) =
-        build_where_clause_internal(exec, clause, use_table_prefix, 1)
+        build_where_clause_internal(exec, clause, use_table_prefix, start_index)
       let sql = string.join(sql_parts, " AND ")
       #(sql, params)
     }

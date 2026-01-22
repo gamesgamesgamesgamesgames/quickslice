@@ -74,7 +74,12 @@ pub fn get_aggregated_records(
         True -> #(mut_where_parts, mut_bind_values)
         False -> {
           let #(where_sql, where_params) =
-            where_clause.build_where_sql(exec, wc, True)
+            where_clause.build_where_sql(
+              exec,
+              wc,
+              True,
+              list.length(mut_bind_values) + 1,
+            )
           let new_where = list.append(mut_where_parts, [where_sql])
           let new_binds = list.append(mut_bind_values, where_params)
           #(new_where, new_binds)

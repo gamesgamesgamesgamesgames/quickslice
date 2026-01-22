@@ -24,7 +24,7 @@ pub fn empty_where_clause_test() {
   let clause =
     where_clause.WhereClause(conditions: dict.new(), and: None, or: None)
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("")
   list.length(params) |> should.equal(0)
@@ -51,7 +51,7 @@ pub fn all_conditions_none_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should produce no SQL since all conditions are None
   sql |> should.equal("")
@@ -79,7 +79,7 @@ pub fn empty_in_list_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Empty IN list should produce no SQL
   sql |> should.equal("")
@@ -91,7 +91,7 @@ pub fn empty_and_clause_list_test() {
   let clause =
     where_clause.WhereClause(conditions: dict.new(), and: Some([]), or: None)
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("")
   list.length(params) |> should.equal(0)
@@ -102,7 +102,7 @@ pub fn empty_or_clause_list_test() {
   let clause =
     where_clause.WhereClause(conditions: dict.new(), and: None, or: Some([]))
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("")
   list.length(params) |> should.equal(0)
@@ -141,7 +141,7 @@ pub fn sql_injection_in_string_value_test() {
         or: None,
       )
 
-    let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+    let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
     // Should use parameterized query with json_extract for non-table columns
     sql |> should.equal("json_extract(json, '$.username') = ?")
@@ -178,7 +178,7 @@ pub fn sql_injection_in_contains_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should use LIKE with parameterized value and json_extract for non-table fields
   sql
@@ -237,9 +237,9 @@ pub fn integer_boundary_values_test() {
     )
 
   let #(sql_large, params_large) =
-    where_clause.build_where_sql(exec, clause_large, False)
+    where_clause.build_where_sql(exec, clause_large, False, 1)
   let #(sql_small, params_small) =
-    where_clause.build_where_sql(exec, clause_small, False)
+    where_clause.build_where_sql(exec, clause_small, False, 1)
 
   // count is a JSON field, not a table column
   sql_large |> should.equal("json_extract(json, '$.count') = ?")
@@ -270,7 +270,7 @@ pub fn empty_string_value_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Empty string is still valid - should use json_extract for non-table columns
   sql |> should.equal("json_extract(json, '$.name') = ?")
@@ -308,7 +308,7 @@ pub fn unicode_string_value_test() {
         or: None,
       )
 
-    let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+    let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
     sql |> should.equal("json_extract(json, '$.text') = ?")
     list.length(params) |> should.equal(1)
@@ -364,7 +364,7 @@ pub fn deeply_nested_and_clauses_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, level5, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, level5, False, 1)
 
   // With single condition at each level, no extra parentheses needed
   // The implementation correctly doesn't add unnecessary parentheses for single conditions
@@ -425,7 +425,7 @@ pub fn mixed_empty_and_non_empty_conditions_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should only include non-empty conditions
   list.length(params) |> should.equal(2)
@@ -570,7 +570,7 @@ pub fn multiple_operators_same_field_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should combine both operators with json_extract and CAST for numeric comparison
   sql
@@ -602,7 +602,7 @@ pub fn conflicting_operators_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should apply both (though logically this might not make sense)
   list.length(params) |> should.equal(3)
@@ -642,7 +642,7 @@ pub fn large_in_list_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should generate correct number of placeholders
   list.length(params) |> should.equal(100)
@@ -683,7 +683,7 @@ pub fn field_name_with_json_path_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should use json_extract for dotted field names
   sql
@@ -721,7 +721,7 @@ pub fn field_name_with_special_chars_test() {
         or: None,
       )
 
-    let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+    let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
     // Should use json_extract even for non-dotted field names
     let expected = "json_extract(json, '$." <> field_name <> "') = ?"

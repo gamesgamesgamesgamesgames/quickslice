@@ -472,8 +472,14 @@ pub fn get_collection_count_with_where(
       case where_clause.is_clause_empty(wc) {
         True -> #(mut_where_parts, mut_bind_values)
         False -> {
+          // Start index is 2 because $1 is used for collection
           let #(where_sql, where_params) =
-            where_clause.build_where_sql(exec, wc, needs_actor_join)
+            where_clause.build_where_sql(
+              exec,
+              wc,
+              needs_actor_join,
+              list.length(mut_bind_values) + 1,
+            )
           let new_where = list.append(mut_where_parts, [where_sql])
           let new_binds = list.append(mut_bind_values, where_params)
           #(new_where, new_binds)
@@ -684,8 +690,14 @@ pub fn get_by_collection_paginated_with_where(
       case where_clause.is_clause_empty(wc) {
         True -> #(mut_where_parts, mut_bind_values)
         False -> {
+          // Start index accounts for prior bind values ($1 = collection)
           let #(where_sql, where_params) =
-            where_clause.build_where_sql(exec, wc, needs_actor_join)
+            where_clause.build_where_sql(
+              exec,
+              wc,
+              needs_actor_join,
+              list.length(mut_bind_values) + 1,
+            )
           let new_where = list.append(mut_where_parts, [where_sql])
           let new_binds = list.append(mut_bind_values, where_params)
           #(new_where, new_binds)
@@ -924,8 +936,14 @@ pub fn get_by_reference_field_paginated(
   // Add where clause conditions if present
   let #(with_where_parts, with_where_values) = case wc {
     Some(clause) -> {
+      // Start index accounts for prior bind values ($1 = collection, $2 = parent_uri, $3 = parent_uri)
       let #(where_sql, where_params) =
-        where_clause.build_where_sql(exec, clause, False)
+        where_clause.build_where_sql(
+          exec,
+          clause,
+          False,
+          list.length(base_bind_values) + 1,
+        )
       case where_sql {
         "" -> #(base_where_parts, base_bind_values)
         _ -> #(
@@ -1281,8 +1299,14 @@ pub fn get_by_dids_and_collection_paginated(
   // Add where clause conditions if present
   let #(with_where_parts, with_where_values) = case wc {
     Some(clause) -> {
+      // Start index accounts for prior bind values ($1 = did, $2 = collection)
       let #(where_sql, where_params) =
-        where_clause.build_where_sql(exec, clause, False)
+        where_clause.build_where_sql(
+          exec,
+          clause,
+          False,
+          list.length(base_bind_values) + 1,
+        )
       case where_sql {
         "" -> #(base_where_parts, base_bind_values)
         _ -> #(

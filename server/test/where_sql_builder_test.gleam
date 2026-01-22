@@ -21,7 +21,7 @@ fn get_test_exec() {
 pub fn build_where_empty_clause_test() {
   let exec = get_test_exec()
   let clause = where_clause.empty_clause()
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("")
   list.length(params) |> should.equal(0)
@@ -49,7 +49,7 @@ pub fn build_where_eq_on_table_column_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("collection = ?")
   list.length(params) |> should.equal(1)
@@ -81,7 +81,7 @@ pub fn build_where_in_operator_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("did IN (?, ?, ?)")
   list.length(params) |> should.equal(3)
@@ -109,7 +109,7 @@ pub fn build_where_gt_operator_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("indexed_at > ?")
   list.length(params) |> should.equal(1)
@@ -137,7 +137,7 @@ pub fn build_where_gte_operator_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Now includes CAST for numeric comparisons on JSON fields
   sql |> should.equal("CAST(json_extract(json, '$.year') AS INTEGER) >= ?")
@@ -166,7 +166,7 @@ pub fn build_where_lt_operator_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("indexed_at < ?")
   list.length(params) |> should.equal(1)
@@ -194,7 +194,7 @@ pub fn build_where_lte_operator_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Now includes CAST for numeric comparisons on JSON fields
   sql |> should.equal("CAST(json_extract(json, '$.count') AS INTEGER) <= ?")
@@ -223,7 +223,7 @@ pub fn build_where_range_query_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should combine both conditions with AND
   sql |> should.equal("indexed_at > ? AND indexed_at < ?")
@@ -267,7 +267,7 @@ pub fn build_where_multiple_fields_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Order might vary due to dict, but should have AND
   should.be_true(string.contains(sql, "AND"))
@@ -300,7 +300,7 @@ pub fn build_where_json_field_eq_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("json_extract(json, '$.text') = ?")
   list.length(params) |> should.equal(1)
@@ -328,7 +328,7 @@ pub fn build_where_nested_json_path_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("json_extract(json, '$.user.name') = ?")
   list.length(params) |> should.equal(1)
@@ -356,7 +356,7 @@ pub fn build_where_deeply_nested_json_path_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("json_extract(json, '$.metadata.tags.0') = ?")
   list.length(params) |> should.equal(1)
@@ -384,7 +384,7 @@ pub fn build_where_json_field_comparison_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Now includes CAST for numeric comparisons on JSON fields
   sql
@@ -431,7 +431,7 @@ pub fn build_where_mixed_table_and_json_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should have both table column and JSON extract with CAST for numeric comparison
   should.be_true(string.contains(sql, "collection = ?"))
@@ -467,7 +467,7 @@ pub fn build_where_contains_json_field_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql
   |> should.equal(
@@ -498,7 +498,7 @@ pub fn build_where_contains_table_column_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("uri LIKE '%' || ? || '%' COLLATE NOCASE")
   list.length(params) |> should.equal(1)
@@ -526,7 +526,7 @@ pub fn build_where_contains_special_chars_test() {
       or: None,
     )
 
-  let #(sql, _params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, _params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // SQL should be generated (actual escaping would be handled by the parameter binding)
   should.be_true(string.contains(sql, "LIKE"))
@@ -570,7 +570,7 @@ pub fn build_where_multiple_contains_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should have both LIKE clauses
   should.be_true(string.contains(sql, "LIKE"))
@@ -600,7 +600,7 @@ pub fn build_where_contains_with_other_operators_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   // Should have both LIKE and > operator
   should.be_true(string.contains(sql, "LIKE"))
@@ -665,7 +665,7 @@ pub fn build_where_nested_and_simple_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False, 1)
 
   // Should have both conditions AND'ed together with parentheses
   should.be_true(string.contains(sql, "collection = ?"))
@@ -721,7 +721,7 @@ pub fn build_where_and_with_root_conditions_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False, 1)
 
   // Should have both root condition and nested condition
   should.be_true(string.contains(sql, "collection = ?"))
@@ -785,7 +785,7 @@ pub fn build_where_complex_and_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False, 1)
 
   // Should have both conditions
   should.be_true(string.contains(sql, "artist"))
@@ -865,7 +865,7 @@ pub fn build_where_deeply_nested_and_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False, 1)
 
   // Should have all three conditions
   should.be_true(string.contains(sql, "collection = ?"))
@@ -931,7 +931,7 @@ pub fn build_where_simple_or_test() {
       or: Some([clause1, clause2]),
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False, 1)
 
   // Should have both conditions OR'ed together
   should.be_true(string.contains(sql, "artist"))
@@ -1026,7 +1026,7 @@ pub fn build_where_combined_and_or_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False, 1)
 
   // Should have proper precedence: (artist LIKE OR genre =) AND year >=
   should.be_true(string.contains(sql, "OR"))
@@ -1172,7 +1172,7 @@ pub fn build_where_complex_nested_or_and_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False, 1)
 
   // Should have both OR and AND with proper nesting
   should.be_true(string.contains(sql, "OR"))
@@ -1260,7 +1260,7 @@ pub fn build_where_multiple_or_at_root_test() {
       or: Some([clause1, clause2, clause3]),
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False, 1)
 
   // Should have all three OR'ed together
   should.be_true(string.contains(sql, "OR"))
@@ -1292,7 +1292,7 @@ pub fn build_where_is_null_true_json_field_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("json_extract(json, '$.replyParent') IS NULL")
   list.length(params) |> should.equal(0)
@@ -1320,7 +1320,7 @@ pub fn build_where_is_null_false_json_field_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("json_extract(json, '$.replyParent') IS NOT NULL")
   list.length(params) |> should.equal(0)
@@ -1348,7 +1348,7 @@ pub fn build_where_is_null_true_table_column_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("cid IS NULL")
   list.length(params) |> should.equal(0)
@@ -1376,7 +1376,7 @@ pub fn build_where_is_null_false_table_column_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, False, 1)
 
   sql |> should.equal("uri IS NOT NULL")
   list.length(params) |> should.equal(0)
@@ -1404,7 +1404,7 @@ pub fn build_where_is_null_with_table_prefix_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, clause, True)
+  let #(sql, params) = where_clause.build_where_sql(exec, clause, True, 1)
 
   sql |> should.equal("json_extract(record.json, '$.text') IS NULL")
   list.length(params) |> should.equal(0)
@@ -1464,7 +1464,7 @@ pub fn build_where_is_null_in_and_clause_test() {
       or: None,
     )
 
-  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False)
+  let #(sql, params) = where_clause.build_where_sql(exec, root_clause, False, 1)
 
   should.be_true(string.contains(sql, "IS NULL"))
   should.be_true(string.contains(sql, "LIKE"))
