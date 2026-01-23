@@ -17,6 +17,10 @@ export interface User {
   did: string;
 }
 
+export interface QueryOptions {
+  signal?: AbortSignal;
+}
+
 export class QuicksliceClient {
   private server: string;
   private clientId: string;
@@ -134,7 +138,8 @@ export class QuicksliceClient {
    */
   async query<T = unknown>(
     query: string,
-    variables: Record<string, unknown> = {}
+    variables: Record<string, unknown> = {},
+    options: QueryOptions = {}
   ): Promise<T> {
     await this.init();
     return await graphqlRequest<T>(
@@ -144,7 +149,8 @@ export class QuicksliceClient {
       this.tokenUrl,
       query,
       variables,
-      true
+      true,
+      options.signal
     );
   }
 
@@ -153,9 +159,10 @@ export class QuicksliceClient {
    */
   async mutate<T = unknown>(
     mutation: string,
-    variables: Record<string, unknown> = {}
+    variables: Record<string, unknown> = {},
+    options: QueryOptions = {}
   ): Promise<T> {
-    return this.query<T>(mutation, variables);
+    return this.query<T>(mutation, variables, options);
   }
 
   /**
@@ -163,7 +170,8 @@ export class QuicksliceClient {
    */
   async publicQuery<T = unknown>(
     query: string,
-    variables: Record<string, unknown> = {}
+    variables: Record<string, unknown> = {},
+    options: QueryOptions = {}
   ): Promise<T> {
     await this.init();
     return await graphqlRequest<T>(
@@ -173,7 +181,8 @@ export class QuicksliceClient {
       this.tokenUrl,
       query,
       variables,
-      false
+      false,
+      options.signal
     );
   }
 }

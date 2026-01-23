@@ -8,6 +8,9 @@ export interface QuicksliceClientOptions {
 export interface User {
     did: string;
 }
+export interface QueryOptions {
+    signal?: AbortSignal;
+}
 export declare class QuicksliceClient {
     private server;
     private clientId;
@@ -56,13 +59,13 @@ export declare class QuicksliceClient {
     /**
      * Execute a GraphQL query (authenticated)
      */
-    query<T = unknown>(query: string, variables?: Record<string, unknown>): Promise<T>;
+    query<T = unknown>(query: string, variables?: Record<string, unknown>, options?: QueryOptions): Promise<T>;
     /**
      * Execute a GraphQL mutation (authenticated)
      */
-    mutate<T = unknown>(mutation: string, variables?: Record<string, unknown>): Promise<T>;
+    mutate<T = unknown>(mutation: string, variables?: Record<string, unknown>, options?: QueryOptions): Promise<T>;
     /**
      * Execute a public GraphQL query (no auth)
      */
-    publicQuery<T = unknown>(query: string, variables?: Record<string, unknown>): Promise<T>;
+    publicQuery<T = unknown>(query: string, variables?: Record<string, unknown>, options?: QueryOptions): Promise<T>;
 }

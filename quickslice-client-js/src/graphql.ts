@@ -17,7 +17,8 @@ export async function graphqlRequest<T = unknown>(
   tokenUrl: string,
   query: string,
   variables: Record<string, unknown> = {},
-  requireAuth = false
+  requireAuth = false,
+  signal?: AbortSignal
 ): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -40,6 +41,7 @@ export async function graphqlRequest<T = unknown>(
     method: 'POST',
     headers,
     body: JSON.stringify({ query, variables }),
+    signal,
   });
 
   if (!response.ok) {

@@ -442,7 +442,7 @@ var QuicksliceClient = (() => {
   }
 
   // src/graphql.ts
-  async function graphqlRequest(storage, namespace, graphqlUrl, tokenUrl, query, variables = {}, requireAuth = false) {
+  async function graphqlRequest(storage, namespace, graphqlUrl, tokenUrl, query, variables = {}, requireAuth = false, signal) {
     const headers = {
       "Content-Type": "application/json"
     };
@@ -458,7 +458,8 @@ var QuicksliceClient = (() => {
     const response = await fetch(graphqlUrl, {
       method: "POST",
       headers,
-      body: JSON.stringify({ query, variables })
+      body: JSON.stringify({ query, variables }),
+      signal
     });
     if (!response.ok) {
       throw new Error(`GraphQL request failed: ${response.statusText}`);
@@ -559,7 +560,7 @@ var QuicksliceClient = (() => {
     /**
      * Execute a GraphQL query (authenticated)
      */
-    async query(query, variables = {}) {
+    async query(query, variables = {}, options = {}) {
       await this.init();
       return await graphqlRequest(
         this.getStorage(),
@@ -568,19 +569,20 @@ var QuicksliceClient = (() => {
         this.tokenUrl,
         query,
         variables,
-        true
+        true,
+        options.signal
       );
     }
     /**
      * Execute a GraphQL mutation (authenticated)
      */
-    async mutate(mutation, variables = {}) {
-      return this.query(mutation, variables);
+    async mutate(mutation, variables = {}, options = {}) {
+      return this.query(mutation, variables, options);
     }
     /**
      * Execute a public GraphQL query (no auth)
      */
-    async publicQuery(query, variables = {}) {
+    async publicQuery(query, variables = {}, options = {}) {
       await this.init();
       return await graphqlRequest(
         this.getStorage(),
@@ -589,7 +591,8 @@ var QuicksliceClient = (() => {
         this.tokenUrl,
         query,
         variables,
-        false
+        false,
+        options.signal
       );
     }
   };
