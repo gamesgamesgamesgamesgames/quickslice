@@ -24,6 +24,7 @@ import handlers/health as health_handler
 import handlers/index as index_handler
 import handlers/logout as logout_handler
 import handlers/mcp as mcp_handler
+import handlers/client_session as client_session_handler
 import handlers/oauth/atp_callback as oauth_atp_callback_handler
 import handlers/oauth/atp_session as oauth_atp_session_handler
 import handlers/oauth/authorize as oauth_authorize_handler
@@ -475,6 +476,9 @@ fn handle_request(
     }
     ["api", "atp", "sessions", session_id] ->
       oauth_atp_session_handler.handle(req, ctx.db, session_id)
+    // Client session management for cookie-based auth
+    ["api", "client", "session"] ->
+      client_session_handler.handle(req, ctx.db, ctx.did_cache)
     // Fallback: serve SPA index.html for client-side routing
     _ -> index_handler.handle()
   }
