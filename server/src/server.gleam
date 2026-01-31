@@ -17,6 +17,7 @@ import gleam/uri
 import handlers/admin_graphql as admin_graphql_handler
 import handlers/admin_oauth_authorize as admin_oauth_authorize_handler
 import handlers/admin_oauth_callback as admin_oauth_callback_handler
+import handlers/client_session as client_session_handler
 import handlers/graphiql as graphiql_handler
 import handlers/graphql as graphql_handler
 import handlers/graphql_ws as graphql_ws_handler
@@ -24,7 +25,6 @@ import handlers/health as health_handler
 import handlers/index as index_handler
 import handlers/logout as logout_handler
 import handlers/mcp as mcp_handler
-import handlers/client_session as client_session_handler
 import handlers/oauth/atp_callback as oauth_atp_callback_handler
 import handlers/oauth/atp_session as oauth_atp_session_handler
 import handlers/oauth/authorize as oauth_authorize_handler

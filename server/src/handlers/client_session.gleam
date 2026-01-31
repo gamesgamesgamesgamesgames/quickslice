@@ -5,7 +5,6 @@
 /// - GET /api/client/session - Get current session status
 /// - DELETE /api/client/session - Logout (destroy session)
 import database/executor.{type Executor}
-import database/repositories/client_session as client_session_repo
 import gleam/bit_array
 import gleam/dynamic/decode
 import gleam/erlang/process.{type Subject}
@@ -54,14 +53,14 @@ fn handle_create(req: Request, db: Executor) -> Response {
                   // Build response with session info
                   let response_json =
                     json.object([
-                      #("authenticated", json.bool(option.is_some(create_req.user_did))),
                       #(
-                        "did",
-                        case create_req.user_did {
-                          Some(did) -> json.string(did)
-                          None -> json.null()
-                        },
+                        "authenticated",
+                        json.bool(option.is_some(create_req.user_did)),
                       ),
+                      #("did", case create_req.user_did {
+                        Some(did) -> json.string(did)
+                        None -> json.null()
+                      }),
                     ])
 
                   wisp.response(200)
@@ -94,20 +93,14 @@ fn handle_get(
       let response_json =
         json.object([
           #("authenticated", json.bool(info.authenticated)),
-          #(
-            "did",
-            case info.did {
-              Some(did) -> json.string(did)
-              None -> json.null()
-            },
-          ),
-          #(
-            "handle",
-            case info.handle {
-              Some(handle) -> json.string(handle)
-              None -> json.null()
-            },
-          ),
+          #("did", case info.did {
+            Some(did) -> json.string(did)
+            None -> json.null()
+          }),
+          #("handle", case info.handle {
+            Some(handle) -> json.string(handle)
+            None -> json.null()
+          }),
         ])
 
       wisp.response(200)
@@ -158,8 +151,16 @@ fn parse_create_request(
   let decoder = {
     use client_id <- decode.field("clientId", decode.string)
     use dpop_jkt <- decode.field("dpopJkt", decode.string)
-    use user_did <- decode.optional_field("userDid", decode.string)
-    use atp_session_id <- decode.optional_field("atpSessionId", decode.string)
+    use user_did <- decode.optional_field(
+      "userDid",
+      None,
+      decode.optional(decode.string),
+    )
+    use atp_session_id <- decode.optional_field(
+      "atpSessionId",
+      None,
+      decode.optional(decode.string),
+    )
     decode.success(CreateSessionRequest(
       client_id: client_id,
       dpop_jkt: dpop_jkt,

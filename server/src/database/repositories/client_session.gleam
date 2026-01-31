@@ -5,6 +5,7 @@ import gleam/dynamic/decode
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
+import lib/oauth/token_generator
 
 /// Client session record
 pub type ClientSession {
@@ -28,7 +29,7 @@ pub fn insert(
   atp_session_id: Option(String),
   dpop_jkt: String,
 ) -> Result(ClientSession, DbError) {
-  let now = executor.current_timestamp(exec)
+  let now = token_generator.current_timestamp()
 
   let sql = case executor.dialect(exec) {
     executor.SQLite ->
@@ -104,7 +105,7 @@ pub fn get(
 
 /// Update last activity timestamp for a session
 pub fn touch(exec: Executor, session_id: String) -> Result(Nil, DbError) {
-  let now = executor.current_timestamp(exec)
+  let now = token_generator.current_timestamp()
 
   let sql = case executor.dialect(exec) {
     executor.SQLite ->
@@ -129,7 +130,7 @@ pub fn update_auth(
   user_did: String,
   atp_session_id: String,
 ) -> Result(Nil, DbError) {
-  let now = executor.current_timestamp(exec)
+  let now = token_generator.current_timestamp()
 
   let sql = case executor.dialect(exec) {
     executor.SQLite ->
@@ -168,7 +169,7 @@ pub fn delete_expired(
   exec: Executor,
   max_age_seconds: Int,
 ) -> Result(Nil, DbError) {
-  let cutoff = executor.current_timestamp(exec) - max_age_seconds
+  let cutoff = token_generator.current_timestamp() - max_age_seconds
 
   let sql = case executor.dialect(exec) {
     executor.SQLite -> "DELETE FROM client_session WHERE last_activity_at < ?"

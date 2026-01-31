@@ -6,33 +6,27 @@ import database/executor.{type Executor}
 import database/repositories/client_session as client_session_repo
 import database/repositories/config as config_repo
 import database/repositories/oauth_access_tokens
-import database/repositories/oauth_atp_sessions
-import database/repositories/oauth_refresh_tokens
 import gleam/bit_array
 import gleam/crypto
+import gleam/erlang/process.{type Subject}
 import gleam/http/cookie
+import gleam/http/request
 import gleam/http/response
 import gleam/option.{type Option, None, Some}
 import gleam/result
 import lib/oauth/atproto/did_resolver
 import lib/oauth/did_cache
-import gleam/erlang/process.{type Subject}
 import wisp.{type Request, type Response}
 
 /// Session data returned to clients
 pub type SessionInfo {
-  SessionInfo(
-    did: Option(String),
-    handle: Option(String),
-    authenticated: Bool,
-  )
+  SessionInfo(did: Option(String), handle: Option(String), authenticated: Bool)
 }
 
 const session_cookie_name = "quickslice_client_session"
 
-const session_max_age_seconds = 60 * 60 * 24 * 14
-
-// 14 days
+// 14 days in seconds
+const session_max_age_seconds = 1_209_600
 
 /// Generate a new session ID using cryptographically secure random bytes
 pub fn generate_session_id() -> String {
@@ -58,7 +52,7 @@ pub fn set_session_cookie(
     config_repo.Never -> False
     config_repo.Auto -> {
       // Check if request came over HTTPS by looking at headers
-      case wisp.get_header(req, "x-forwarded-proto") {
+      case request.get_header(req, "x-forwarded-proto") {
         Ok("https") -> True
         _ -> False
       }
@@ -127,7 +121,9 @@ pub fn get_session_info(
       Ok(SessionInfo(did: None, handle: None, authenticated: False))
     Some(did) -> {
       // Resolve handle from DID
-      let handle = case did_resolver.resolve_did_with_cache(did_cache, did, False) {
+      let handle = case
+        did_resolver.resolve_did_with_cache(did_cache, did, False)
+      {
         Ok(doc) -> did_resolver.get_handle(doc)
         Error(_) -> None
       }

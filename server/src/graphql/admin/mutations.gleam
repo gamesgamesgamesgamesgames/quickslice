@@ -1530,17 +1530,23 @@ pub fn mutation_type(
                 }
 
                 // Return updated settings
-                let same_site = config_repo.same_site_to_string(
-                  config_repo.get_cookie_same_site(conn),
-                )
-                let secure = config_repo.secure_to_string(
-                  config_repo.get_cookie_secure(conn),
-                )
+                let same_site =
+                  config_repo.same_site_to_string(
+                    config_repo.get_cookie_same_site(conn),
+                  )
+                let secure =
+                  config_repo.secure_to_string(config_repo.get_cookie_secure(
+                    conn,
+                  ))
                 let domain = case config_repo.get_cookie_domain(conn) {
                   Ok(d) -> Some(d)
                   Error(_) -> None
                 }
-                Ok(converters.cookie_settings_to_value(same_site, secure, domain))
+                Ok(converters.cookie_settings_to_value(
+                  same_site,
+                  secure,
+                  domain,
+                ))
               }
               False -> Error("Admin privileges required")
             }

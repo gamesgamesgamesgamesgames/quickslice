@@ -13,7 +13,7 @@ import gleam/erlang/process.{type Subject}
 import gleam/http
 import gleam/json
 import gleam/list
-import gleam/option.{None, Some}
+import gleam/option
 import gleam/result
 import gleam/string
 import graphql/lexicon/schema as lexicon_schema
