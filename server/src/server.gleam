@@ -506,7 +506,7 @@ fn middleware(
       wisp.response(200)
       |> wisp.set_header("access-control-allow-origin", origin)
       |> wisp.set_header("access-control-allow-credentials", "true")
-      |> wisp.set_header("access-control-allow-methods", "GET, POST, OPTIONS")
+      |> wisp.set_header("access-control-allow-methods", "GET, POST, DELETE, OPTIONS")
       |> wisp.set_header(
         "access-control-allow-headers",
         "Content-Type, Authorization, DPoP",
@@ -518,7 +518,7 @@ fn middleware(
       handle_request(req)
       |> wisp.set_header("access-control-allow-origin", origin)
       |> wisp.set_header("access-control-allow-credentials", "true")
-      |> wisp.set_header("access-control-allow-methods", "GET, POST, OPTIONS")
+      |> wisp.set_header("access-control-allow-methods", "GET, POST, DELETE, OPTIONS")
       |> wisp.set_header(
         "access-control-allow-headers",
         "Content-Type, Authorization, DPoP",
