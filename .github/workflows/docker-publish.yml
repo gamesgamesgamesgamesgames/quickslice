@@ -25,6 +25,9 @@ jobs:
         with:
           node-version: "18"
 
+      - name: Install Bun
+        run: npm install -g bun
+
       - name: Download Gleam dependencies
         working-directory: client
         run: gleam deps download
