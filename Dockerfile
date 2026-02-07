@@ -27,10 +27,10 @@ RUN cd /build/server && gleam deps download
 COPY ./patches /build/patches
 RUN cd /build && patch -p1 < patches/mist-websocket-protocol.patch
 
-# Now copy full source code
-COPY ./lexicon_graphql /build/lexicon_graphql
-COPY ./atproto_car /build/atproto_car
-COPY ./server /build/server
+# Source code only (changes to db/, docker-entrypoint.sh, etc. won't bust this cache)
+COPY ./lexicon_graphql/src /build/lexicon_graphql/src
+COPY ./atproto_car/src /build/atproto_car/src
+COPY ./server/src /build/server/src
 
 # Pre-built client assets
 COPY ./build/static /build/server/priv/static
@@ -55,10 +55,10 @@ RUN apk add --no-cache sqlite-libs sqlite libpq curl \
 # Copy the compiled server code from the builder stage
 COPY --from=builder /build/server/build/erlang-shipment /app
 
-# Copy database migrations and config
-COPY --from=builder /build/server/db /app/db
-COPY --from=builder /build/server/.dbmate.yml /app/.dbmate.yml
-COPY --from=builder /build/server/docker-entrypoint.sh /app/docker-entrypoint.sh
+# Copy database migrations and config directly from build context
+COPY ./server/db /app/db
+COPY ./server/.dbmate.yml /app/.dbmate.yml
+COPY ./server/docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Set up the entrypoint
 WORKDIR /app
