@@ -17,27 +17,30 @@ RUN apk add --no-cache \
 # Configure git for non-interactive use
 ENV GIT_TERMINAL_PROMPT=0
 
-# Add local dependencies first (these change less frequently)
-COPY ./lexicon_graphql /build/lexicon_graphql
-COPY ./client /build/client
-COPY ./atproto_car /build/atproto_car
+# Copy only dependency manifests first (these change infrequently)
+COPY ./client/gleam.toml ./client/manifest.toml /build/client/
+COPY ./client/package.json ./client/package-lock.json /build/client/
+COPY ./lexicon_graphql/gleam.toml ./lexicon_graphql/manifest.toml /build/lexicon_graphql/
+COPY ./atproto_car/gleam.toml ./atproto_car/manifest.toml /build/atproto_car/
+COPY ./server/gleam.toml ./server/manifest.toml /build/server/
 
-# Add server code
-COPY ./server /build/server
-
-# Add patches directory
-COPY ./patches /build/patches
-
-# Install dependencies for all projects
+# Download Gleam dependencies (cached unless manifests change)
 RUN cd /build/client && gleam deps download
 RUN cd /build/lexicon_graphql && gleam deps download
 RUN cd /build/server && gleam deps download
 
-# Apply patches to dependencies
+# Install JavaScript dependencies for client (cached unless package-lock changes)
+RUN cd /build/client && npm install
+
+# Copy patches and apply (before full source copy so patch layer is cached)
+COPY ./patches /build/patches
 RUN cd /build && patch -p1 < patches/mist-websocket-protocol.patch
 
-# Install JavaScript dependencies for client
-RUN cd /build/client && npm install
+# Now copy full source code
+COPY ./lexicon_graphql /build/lexicon_graphql
+COPY ./client /build/client
+COPY ./atproto_car /build/atproto_car
+COPY ./server /build/server
 
 # Compile the client code and output to server's static directory
 RUN cd /build/client \
