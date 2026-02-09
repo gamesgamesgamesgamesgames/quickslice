@@ -2,6 +2,7 @@
 ///
 /// Verifies that viewer fields show the authenticated viewer's relationship
 /// to records (e.g., viewer's like on a gallery)
+import auth_types
 import database/repositories/lexicons
 import database/repositories/records
 import gleam/http
@@ -192,7 +193,15 @@ pub fn viewer_favorite_null_when_not_favorited_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -270,7 +279,15 @@ pub fn viewer_favorite_schema_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -339,7 +356,15 @@ pub fn viewer_follow_null_when_not_following_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -425,7 +450,15 @@ pub fn viewer_follow_returns_follow_when_following_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -508,7 +541,15 @@ pub fn viewer_favorite_returns_favorite_when_favorited_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 

@@ -1,7 +1,9 @@
 /// GraphQL WebSocket Handler
 ///
 /// Handles WebSocket connections for GraphQL subscriptions using the graphql-ws protocol
+import aip_auth
 import atproto_auth
+import auth_types.{type AuthProvider}
 import database/executor.{type Executor}
 import database/repositories/actors
 import gleam/dict.{type Dict}
@@ -190,6 +192,7 @@ pub fn handle_websocket(
   atp_client_id: String,
   plc_url: String,
   domain_authority: String,
+  auth_provider: AuthProvider,
 ) -> response.Response(ResponseData) {
   // Extract auth token from request headers before WebSocket upgrade
   let auth_token = case request.get_header(req, "authorization") {
@@ -205,9 +208,19 @@ pub fn handle_websocket(
   // Verify auth token and extract viewer DID
   let viewer_did = case auth_token {
     Some(token) -> {
-      case atproto_auth.verify_token(db, token) {
-        Ok(user_info) -> Some(user_info.did)
-        Error(_) -> None
+      case auth_provider {
+        auth_types.Aip(base_url) -> {
+          case aip_auth.resolve(base_url, token, None) {
+            Ok(#(user_info, _)) -> Some(user_info.did)
+            Error(_) -> None
+          }
+        }
+        auth_types.Internal -> {
+          case atproto_auth.verify_token(db, token) {
+            Ok(user_info) -> Some(user_info.did)
+            Error(_) -> None
+          }
+        }
       }
     }
     None -> None
@@ -227,6 +240,7 @@ pub fn handle_websocket(
           atp_client_id,
           plc_url,
           domain_authority,
+          auth_provider,
         )
       {
         Ok(schema) -> schema

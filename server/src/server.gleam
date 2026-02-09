@@ -1,4 +1,5 @@
 import activity_cleanup
+import auth_types.{type AuthProvider}
 import backfill
 import backfill_state
 import database/connection
@@ -57,6 +58,8 @@ pub type Context {
     oauth_loopback_mode: Bool,
     /// AT Protocol client_id for OAuth (metadata URL or loopback client_id)
     atp_client_id: String,
+    /// Auth provider: Internal (default) or Aip for delegated auth
+    auth_provider: AuthProvider,
   )
 }
 
@@ -239,6 +242,32 @@ fn start_server(
     False -> external_base_url <> "/oauth-client-metadata.json"
   }
 
+  // Determine auth provider from environment
+  let auth_provider = case envoy.get("AUTH_PROVIDER") {
+    Ok("aip") -> {
+      case envoy.get("AIP_BASE_URL") {
+        Ok(base_url) -> {
+          logging.log(
+            logging.Info,
+            "[server] Using AIP auth provider at " <> base_url,
+          )
+          auth_types.Aip(base_url)
+        }
+        Error(_) -> {
+          logging.log(
+            logging.Warning,
+            "[server] AUTH_PROVIDER=aip but AIP_BASE_URL not set, falling back to internal auth",
+          )
+          auth_types.Internal
+        }
+      }
+    }
+    _ -> {
+      logging.log(logging.Info, "[server] Using internal auth provider")
+      auth_types.Internal
+    }
+  }
+
   let ctx =
     Context(
       db: db,
@@ -249,6 +278,7 @@ fn start_server(
       oauth_signing_key: oauth_signing_key,
       oauth_loopback_mode: oauth_loopback_mode,
       atp_client_id: atp_client_id,
+      auth_provider: auth_provider,
     )
 
   let handler = fn(req) { handle_request(req, ctx, static_directory) }
@@ -291,6 +321,7 @@ fn start_server(
                   ctx.atp_client_id,
                   config_repo.get_plc_directory_url(ctx.db),
                   domain_authority,
+                  ctx.auth_provider,
                 )
               }
               _ -> wisp_handler(req)
@@ -392,6 +423,7 @@ fn handle_request(
         ctx.oauth_signing_key,
         ctx.atp_client_id,
         config_repo.get_plc_directory_url(ctx.db),
+        ctx.auth_provider,
       )
     ["graphiql"] ->
       graphiql_handler.handle_graphiql_request(req, ctx.db, ctx.did_cache)

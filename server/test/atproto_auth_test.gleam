@@ -1,4 +1,5 @@
 import atproto_auth
+import auth_types
 import database/executor.{type Executor, Int, Text}
 import database/repositories/oauth_access_tokens
 import database/repositories/oauth_atp_sessions
@@ -66,7 +67,7 @@ pub fn verify_token_not_found_returns_error_test() {
 
   result |> should.be_error
   let assert Error(err) = result
-  err |> should.equal(atproto_auth.UnauthorizedToken)
+  err |> should.equal(auth_types.UnauthorizedToken)
 }
 
 pub fn verify_token_revoked_returns_error_test() {
@@ -92,7 +93,7 @@ pub fn verify_token_revoked_returns_error_test() {
 
   result |> should.be_error
   let assert Error(err) = result
-  err |> should.equal(atproto_auth.UnauthorizedToken)
+  err |> should.equal(auth_types.UnauthorizedToken)
 }
 
 pub fn verify_token_expired_returns_error_test() {
@@ -119,7 +120,7 @@ pub fn verify_token_expired_returns_error_test() {
 
   result |> should.be_error
   let assert Error(err) = result
-  err |> should.equal(atproto_auth.TokenExpired)
+  err |> should.equal(auth_types.TokenExpired)
 }
 
 pub fn verify_token_no_user_id_returns_error_test() {
@@ -145,7 +146,7 @@ pub fn verify_token_no_user_id_returns_error_test() {
 
   result |> should.be_error
   let assert Error(err) = result
-  err |> should.equal(atproto_auth.UnauthorizedToken)
+  err |> should.equal(auth_types.UnauthorizedToken)
 }
 
 // ===== get_atp_session tests =====
@@ -177,7 +178,7 @@ pub fn get_atp_session_no_session_id_returns_error_test() {
 
   result |> should.be_error
   let assert Error(err) = result
-  err |> should.equal(atproto_auth.SessionNotFound)
+  err |> should.equal(auth_types.SessionNotFound)
 }
 
 pub fn get_atp_session_not_exchanged_returns_error_test() {
@@ -227,7 +228,7 @@ pub fn get_atp_session_not_exchanged_returns_error_test() {
 
   result |> should.be_error
   let assert Error(err) = result
-  err |> should.equal(atproto_auth.SessionNotReady)
+  err |> should.equal(auth_types.SessionNotReady)
 }
 
 pub fn get_atp_session_with_exchange_error_returns_error_test() {
@@ -276,5 +277,5 @@ pub fn get_atp_session_with_exchange_error_returns_error_test() {
 
   result |> should.be_error
   let assert Error(err) = result
-  err |> should.equal(atproto_auth.SessionNotReady)
+  err |> should.equal(auth_types.SessionNotReady)
 }

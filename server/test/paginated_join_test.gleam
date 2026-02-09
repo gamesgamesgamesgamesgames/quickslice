@@ -5,6 +5,7 @@
 /// - Reverse joins return paginated connections
 /// - PageInfo is correctly populated
 /// - Cursors work for pagination
+import auth_types
 import database/repositories/lexicons
 import database/repositories/records
 import gleam/int
@@ -237,6 +238,8 @@ pub fn did_join_first_one_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify only 1 post is returned
@@ -356,6 +359,8 @@ pub fn did_join_first_two_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Count how many post URIs appear (should be 2)
@@ -473,6 +478,8 @@ pub fn reverse_join_first_one_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Count how many like URIs appear (should be 1)
@@ -591,6 +598,8 @@ pub fn did_join_default_pagination_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // All 3 posts should be returned (within default limit of 50)

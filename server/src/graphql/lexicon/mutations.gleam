@@ -4,6 +4,7 @@
 /// These resolvers handle authentication, validation, and database operations.
 import actor_validator
 import atproto_auth
+import auth_types.{type AuthProvider}
 import backfill
 import database/executor.{type Executor}
 import database/repositories/label_definitions
@@ -41,6 +42,7 @@ pub type MutationContext {
     plc_url: String,
     collection_ids: List(String),
     external_collection_ids: List(String),
+    auth_provider: AuthProvider,
   )
 }
 
@@ -49,8 +51,8 @@ pub type MutationContext {
 /// Authenticated session info returned by auth helper
 type AuthenticatedSession {
   AuthenticatedSession(
-    user_info: atproto_auth.UserInfo,
-    session: atproto_auth.AtprotoSession,
+    user_info: auth_types.UserInfo,
+    session: auth_types.AtprotoSession,
   )
 }
 
@@ -58,8 +60,8 @@ type AuthenticatedSession {
 /// Use this for mutations that don't need ATP session (e.g., label preferences)
 fn get_viewer_auth(
   resolver_ctx: schema.Context,
-  db: executor.Executor,
-) -> Result(atproto_auth.UserInfo, String) {
+  ctx: MutationContext,
+) -> Result(auth_types.UserInfo, String) {
   // Extract auth token from context data
   let token = case resolver_ctx.data {
     option.Some(value.Object(fields)) -> {
@@ -75,17 +77,53 @@ fn get_viewer_auth(
 
   use token <- result.try(token)
 
-  // Verify OAuth token
-  atproto_auth.verify_token(db, token)
-  |> result.map_error(fn(err) {
-    case err {
-      atproto_auth.UnauthorizedToken -> "Unauthorized"
-      atproto_auth.TokenExpired -> "Token expired"
-      atproto_auth.MissingAuthHeader -> "Missing authentication"
-      atproto_auth.InvalidAuthHeader -> "Invalid authentication header"
-      _ -> "Authentication error"
+  // Extract delegate_for from context data
+  let delegate_for = case resolver_ctx.data {
+    option.Some(value.Object(fields)) -> {
+      case list.key_find(fields, "delegate_for") {
+        Ok(value.String(d)) -> option.Some(d)
+        _ -> option.None
+      }
     }
-  })
+    _ -> option.None
+  }
+
+  // Dispatch based on auth provider
+  case ctx.auth_provider {
+    auth_types.Aip(base_url) -> {
+      case
+        atproto_auth.resolve_auth(
+          ctx.db,
+          ctx.did_cache,
+          token,
+          ctx.signing_key,
+          ctx.atp_client_id,
+          auth_types.Aip(base_url),
+          delegate_for,
+        )
+      {
+        Ok(#(user_info, _)) -> Ok(user_info)
+        Error(err) ->
+          Error(case err {
+            auth_types.UnauthorizedToken -> "Unauthorized"
+            auth_types.TokenExpired -> "Token expired"
+            _ -> "Authentication error"
+          })
+      }
+    }
+    auth_types.Internal -> {
+      atproto_auth.verify_token(ctx.db, token)
+      |> result.map_error(fn(err) {
+        case err {
+          auth_types.UnauthorizedToken -> "Unauthorized"
+          auth_types.TokenExpired -> "Token expired"
+          auth_types.MissingAuthHeader -> "Missing authentication"
+          auth_types.InvalidAuthHeader -> "Invalid authentication header"
+          _ -> "Authentication error"
+        }
+      })
+    }
+  }
 }
 
 /// Extract token, verify auth, ensure actor exists, get ATP session
@@ -108,15 +146,38 @@ fn get_authenticated_session(
 
   use token <- result.try(token)
 
-  // Step 2: Verify OAuth token
-  use user_info <- result.try(
-    atproto_auth.verify_token(ctx.db, token)
+  // Extract delegate_for from context data
+  let delegate_for = case resolver_ctx.data {
+    option.Some(value.Object(fields)) -> {
+      case list.key_find(fields, "delegate_for") {
+        Ok(value.String(d)) -> option.Some(d)
+        _ -> option.None
+      }
+    }
+    _ -> option.None
+  }
+
+  // Step 2+4: Resolve auth (verify token + get ATP session) via auth provider
+  use #(user_info, session) <- result.try(
+    atproto_auth.resolve_auth(
+      ctx.db,
+      ctx.did_cache,
+      token,
+      ctx.signing_key,
+      ctx.atp_client_id,
+      ctx.auth_provider,
+      delegate_for,
+    )
     |> result.map_error(fn(err) {
       case err {
-        atproto_auth.UnauthorizedToken -> "Unauthorized"
-        atproto_auth.TokenExpired -> "Token expired"
-        atproto_auth.MissingAuthHeader -> "Missing authentication"
-        atproto_auth.InvalidAuthHeader -> "Invalid authentication header"
+        auth_types.UnauthorizedToken -> "Unauthorized"
+        auth_types.TokenExpired -> "Token expired"
+        auth_types.MissingAuthHeader -> "Missing authentication"
+        auth_types.InvalidAuthHeader -> "Invalid authentication header"
+        auth_types.SessionNotFound -> "Session not found"
+        auth_types.SessionNotReady -> "Session not ready"
+        auth_types.RefreshFailed(msg) -> "Token refresh failed: " <> msg
+        auth_types.DIDResolutionFailed(msg) -> "DID resolution failed: " <> msg
         _ -> "Authentication error"
       }
     }),
@@ -145,27 +206,6 @@ fn get_authenticated_session(
     }
     False -> Nil
   }
-
-  // Step 4: Get AT Protocol session
-  use session <- result.try(
-    atproto_auth.get_atp_session(
-      ctx.db,
-      ctx.did_cache,
-      token,
-      ctx.signing_key,
-      ctx.atp_client_id,
-    )
-    |> result.map_error(fn(err) {
-      case err {
-        atproto_auth.SessionNotFound -> "Session not found"
-        atproto_auth.SessionNotReady -> "Session not ready"
-        atproto_auth.RefreshFailed(msg) -> "Token refresh failed: " <> msg
-        atproto_auth.DIDResolutionFailed(msg) ->
-          "DID resolution failed: " <> msg
-        _ -> "Failed to get ATP session"
-      }
-    }),
-  )
 
   Ok(AuthenticatedSession(user_info: user_info, session: session))
 }
@@ -1278,7 +1318,7 @@ pub fn set_label_preference_resolver_factory(
 ) -> schema.Resolver {
   fn(resolver_ctx: schema.Context) -> Result(value.Value, String) {
     // Get viewer auth (lightweight - no ATP session needed)
-    use user_info <- result.try(get_viewer_auth(resolver_ctx, ctx.db))
+    use user_info <- result.try(get_viewer_auth(resolver_ctx, ctx))
 
     // Get val (required) argument
     let val_result = case schema.get_argument(resolver_ctx, "val") {

@@ -6,14 +6,16 @@
 /// Supports two authentication methods:
 /// 1. Cookie + DPoP (primary for JS SDK v2+): Session cookie with DPoP proof
 /// 2. Authorization header (fallback): For backward compatibility
+import auth_types.{type AuthProvider}
 import database/executor.{type Executor}
 import gleam/bit_array
 import gleam/dynamic/decode
 import gleam/erlang/process.{type Subject}
 import gleam/http
+import gleam/http/request
 import gleam/json
 import gleam/list
-import gleam/option
+import gleam/option.{type Option, None, Some}
 import gleam/result
 import gleam/string
 import graphql/lexicon/schema as lexicon_schema
@@ -34,7 +36,14 @@ pub fn handle_graphql_request(
   signing_key: option.Option(String),
   atp_client_id: String,
   plc_url: String,
+  auth_provider: AuthProvider,
 ) -> wisp.Response {
+  // Extract delegate_for header for AIP delegation
+  let delegate_for = case request.get_header(req, "x-delegate-for") {
+    Ok(did) -> Some(did)
+    Error(_) -> None
+  }
+
   case req.method {
     http.Post ->
       handle_graphql_post(
@@ -44,6 +53,8 @@ pub fn handle_graphql_request(
         signing_key,
         atp_client_id,
         plc_url,
+        auth_provider,
+        delegate_for,
       )
     http.Get ->
       handle_graphql_get(
@@ -53,6 +64,8 @@ pub fn handle_graphql_request(
         signing_key,
         atp_client_id,
         plc_url,
+        auth_provider,
+        delegate_for,
       )
     _ -> method_not_allowed_response()
   }
@@ -65,6 +78,8 @@ fn handle_graphql_post(
   signing_key: option.Option(String),
   atp_client_id: String,
   plc_url: String,
+  auth_provider: AuthProvider,
+  delegate_for: Option(String),
 ) -> wisp.Response {
   // Try to get auth token, checking cookie-based auth first, then Authorization header
   let auth_token = get_auth_token(req, db)
@@ -86,6 +101,8 @@ fn handle_graphql_post(
                 signing_key,
                 atp_client_id,
                 plc_url,
+                auth_provider,
+                delegate_for,
               )
             }
             Error(err) -> bad_request_response("Invalid JSON: " <> err)
@@ -105,6 +122,8 @@ fn handle_graphql_get(
   signing_key: option.Option(String),
   atp_client_id: String,
   plc_url: String,
+  auth_provider: AuthProvider,
+  delegate_for: Option(String),
 ) -> wisp.Response {
   // Try to get auth token, checking cookie-based auth first, then Authorization header
   let auth_token = get_auth_token(req, db)
@@ -122,6 +141,8 @@ fn handle_graphql_get(
         signing_key,
         atp_client_id,
         plc_url,
+        auth_provider,
+        delegate_for,
       )
     Error(_) -> bad_request_response("Missing 'query' parameter")
   }
@@ -136,6 +157,8 @@ fn execute_graphql_query(
   signing_key: option.Option(String),
   atp_client_id: String,
   plc_url: String,
+  auth_provider: AuthProvider,
+  delegate_for: Option(String),
 ) -> wisp.Response {
   // Use the new pure Gleam GraphQL implementation
   case
@@ -148,6 +171,8 @@ fn execute_graphql_query(
       signing_key,
       atp_client_id,
       plc_url,
+      auth_provider,
+      delegate_for,
     )
   {
     Ok(result_json) -> success_response(result_json)

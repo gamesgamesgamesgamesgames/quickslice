@@ -5,6 +5,7 @@
 /// 2. GraphQL schema building from database lexicons
 /// 3. Query execution and result formatting
 /// 4. JSON parsing and encoding throughout the pipeline
+import auth_types
 import database/repositories/actors
 import database/repositories/lexicons
 import database/repositories/records
@@ -178,6 +179,7 @@ pub fn graphql_post_request_with_records_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -251,6 +253,7 @@ pub fn graphql_post_request_empty_results_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -292,6 +295,7 @@ pub fn graphql_get_request_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -327,6 +331,7 @@ pub fn graphql_invalid_json_request_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Should return 400 Bad Request
@@ -366,6 +371,7 @@ pub fn graphql_missing_query_field_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Should return 400 Bad Request
@@ -397,6 +403,7 @@ pub fn graphql_method_not_allowed_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Should return 405 Method Not Allowed
@@ -496,6 +503,7 @@ pub fn graphql_multiple_lexicons_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   response1.status
@@ -549,6 +557,7 @@ pub fn graphql_multiple_lexicons_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   response2.status
@@ -617,6 +626,7 @@ pub fn graphql_record_limit_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   response.status
@@ -730,6 +740,7 @@ pub fn graphql_actor_handle_lookup_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -846,6 +857,7 @@ pub fn graphql_filter_by_actor_handle_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response

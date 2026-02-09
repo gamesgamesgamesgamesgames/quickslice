@@ -5,6 +5,7 @@
 /// - where filters work on nested joins
 /// - totalCount reflects filtered results
 /// - Combination of sortBy + where works correctly
+import auth_types
 import database/repositories/actors
 import database/repositories/lexicons
 import database/repositories/records
@@ -205,6 +206,8 @@ pub fn did_join_sortby_createdat_desc_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify totalCount is 5 (all statuses)
@@ -351,6 +354,8 @@ pub fn did_join_sortby_createdat_asc_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // With sortBy createdAt ASC, first:3 should return Status 1, 2, 3 (oldest first)
@@ -472,6 +477,8 @@ pub fn did_join_where_filter_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // totalCount should be 3 (only statuses containing "gleam")
@@ -602,6 +609,8 @@ pub fn did_join_sortby_where_first_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // totalCount should be 3 (all rust posts)
@@ -772,6 +781,8 @@ pub fn user_query_pattern_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Should only return 1 profile (chadtmiller.com)

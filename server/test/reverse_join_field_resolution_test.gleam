@@ -4,6 +4,7 @@
 /// 1. Forward join fields (like itemResolved) available through reverse joins
 /// 2. Integer and object fields resolved correctly (not always converted to strings)
 /// 3. Nested queries work correctly: profile → galleries → items → photos
+import auth_types
 import database/repositories/lexicons
 import database/repositories/records
 import gleam/bool
@@ -351,6 +352,8 @@ pub fn reverse_join_includes_forward_join_fields_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify the response includes the gallery
@@ -433,6 +436,8 @@ pub fn integer_field_resolves_correctly_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify position is returned as integer, not string or null
@@ -595,6 +600,8 @@ pub fn nested_query_profile_to_photos_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify all levels of nesting work

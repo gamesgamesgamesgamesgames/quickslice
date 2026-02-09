@@ -2,6 +2,7 @@
 ///
 /// Tests the viewerLabelPreferences query and setLabelPreference mutation
 /// via the GraphQL API endpoint
+import auth_types
 import database/repositories/lexicons
 import gleam/http
 import gleam/json
@@ -84,7 +85,15 @@ pub fn viewer_label_preferences_returns_defaults_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -132,7 +141,15 @@ pub fn viewer_label_preferences_requires_auth_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -174,7 +191,15 @@ pub fn set_label_preference_updates_visibility_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -206,6 +231,7 @@ pub fn set_label_preference_updates_visibility_test() {
       None,
       "",
       "",
+      auth_types.Internal,
     )
 
   let assert wisp.Text(verify_body) = verify_response.body
@@ -247,7 +273,15 @@ pub fn set_label_preference_rejects_system_labels_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -286,7 +320,15 @@ pub fn set_label_preference_requires_auth_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -328,7 +370,15 @@ pub fn set_label_preference_validates_visibility_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 
@@ -369,7 +419,15 @@ pub fn set_label_preference_rejects_unknown_label_test() {
 
   let assert Ok(cache) = did_cache.start()
   let response =
-    graphql_handler.handle_graphql_request(request, exec, cache, None, "", "")
+    graphql_handler.handle_graphql_request(
+      request,
+      exec,
+      cache,
+      None,
+      "",
+      "",
+      auth_types.Internal,
+    )
 
   let assert wisp.Text(body) = response.body
 

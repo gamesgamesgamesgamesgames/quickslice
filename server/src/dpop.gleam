@@ -1,10 +1,12 @@
-import atproto_auth.{type AtprotoSession}
+import aip_auth
+import auth_types.{type AtprotoSession}
 import gleam/bit_array
 import gleam/http.{type Method, Delete, Get, Head, Options, Patch, Post, Put}
 import gleam/http/request
 import gleam/http/response.{type Response}
 import gleam/list
 import gleam/option.{None, Some}
+import gleam/result
 import gleam/string
 import jose_wrapper
 import lib/http_client
@@ -61,30 +63,44 @@ fn make_dpop_request_with_nonce(
   body: String,
   nonce: option.Option(String),
 ) -> Result(Response(String), String) {
-  // Generate DPoP proof token with optional nonce
-  case
-    jose_wrapper.generate_dpop_proof_with_nonce(
-      method,
-      url,
-      session.access_token,
-      session.dpop_jwk,
-      nonce,
-    )
-  {
-    Error(err) ->
-      Error("Failed to generate DPoP proof: " <> string.inspect(err))
-    Ok(dpop_proof) -> {
-      // Create the HTTP request with DPoP headers
+  // Get DPoP proof + access token: remote signing via AIP or local
+  let proof_result = case session.aip_signing {
+    Some(aip) ->
+      aip_auth.request_dpop_proof(
+        aip.base_url,
+        aip.auth_token,
+        method,
+        url,
+        aip.delegate_for,
+        nonce,
+      )
+      |> result.map_error(fn(err) {
+        "Failed to get DPoP proof from AIP: " <> string.inspect(err)
+      })
+    None ->
+      jose_wrapper.generate_dpop_proof_with_nonce(
+        method,
+        url,
+        session.access_token,
+        session.dpop_jwk,
+        nonce,
+      )
+      |> result.map_error(fn(err) {
+        "Failed to generate DPoP proof: " <> string.inspect(err)
+      })
+      |> result.map(fn(proof) { #(proof, session.access_token) })
+  }
+
+  case proof_result {
+    Error(err) -> Error(err)
+    Ok(#(dpop_proof, access_token)) -> {
       case request.to(url) {
         Error(_) -> Error("Failed to create request")
         Ok(req) -> {
           let req =
             req
             |> request.set_method(parse_method(method))
-            |> request.set_header(
-              "authorization",
-              "DPoP " <> session.access_token,
-            )
+            |> request.set_header("authorization", "DPoP " <> access_token)
             |> request.set_header("dpop", dpop_proof)
             |> request.set_header("content-type", "application/json")
             |> request.set_body(body)
@@ -171,30 +187,44 @@ fn make_dpop_request_with_binary_and_nonce(
   content_type: String,
   nonce: option.Option(String),
 ) -> Result(Response(String), String) {
-  // Generate DPoP proof token with optional nonce
-  case
-    jose_wrapper.generate_dpop_proof_with_nonce(
-      method,
-      url,
-      session.access_token,
-      session.dpop_jwk,
-      nonce,
-    )
-  {
-    Error(err) ->
-      Error("Failed to generate DPoP proof: " <> string.inspect(err))
-    Ok(dpop_proof) -> {
-      // Create the HTTP request with DPoP headers
+  // Get DPoP proof + access token: remote signing via AIP or local
+  let proof_result = case session.aip_signing {
+    Some(aip) ->
+      aip_auth.request_dpop_proof(
+        aip.base_url,
+        aip.auth_token,
+        method,
+        url,
+        aip.delegate_for,
+        nonce,
+      )
+      |> result.map_error(fn(err) {
+        "Failed to get DPoP proof from AIP: " <> string.inspect(err)
+      })
+    None ->
+      jose_wrapper.generate_dpop_proof_with_nonce(
+        method,
+        url,
+        session.access_token,
+        session.dpop_jwk,
+        nonce,
+      )
+      |> result.map_error(fn(err) {
+        "Failed to generate DPoP proof: " <> string.inspect(err)
+      })
+      |> result.map(fn(proof) { #(proof, session.access_token) })
+  }
+
+  case proof_result {
+    Error(err) -> Error(err)
+    Ok(#(dpop_proof, access_token)) -> {
       case request.to(url) {
         Error(_) -> Error("Failed to create request")
         Ok(req) -> {
           let req =
             req
             |> request.set_method(parse_method(method))
-            |> request.set_header(
-              "authorization",
-              "DPoP " <> session.access_token,
-            )
+            |> request.set_header("authorization", "DPoP " <> access_token)
             |> request.set_header("dpop", dpop_proof)
             |> request.set_header("content-type", content_type)
             |> request.set_body(body)

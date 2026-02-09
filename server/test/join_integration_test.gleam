@@ -5,6 +5,7 @@
 /// - Reverse joins discover and resolve relationships
 /// - DataLoader batches queries efficiently
 /// - All join types work with actual SQLite database queries
+import auth_types
 import database/repositories/lexicons
 import database/repositories/records
 import gleam/json
@@ -234,6 +235,8 @@ pub fn forward_join_at_uri_resolves_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify the response contains resolved join with parent URI
@@ -332,6 +335,8 @@ pub fn forward_join_strong_ref_resolves_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify the response contains resolved strongRef join with post URI
@@ -447,6 +452,8 @@ pub fn reverse_join_resolves_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify the response contains reverse join results
@@ -573,6 +580,8 @@ pub fn dataloader_batches_forward_joins_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify all posts appear
@@ -703,6 +712,8 @@ pub fn reverse_join_with_strong_ref_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify the reverse join through strongRef works
@@ -843,6 +854,8 @@ pub fn forward_join_union_inline_fragments_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify we can access type-specific fields through inline fragments
@@ -993,6 +1006,8 @@ pub fn did_join_to_literal_self_returns_single_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify the response contains the DID-joined profile as a single object (not array)
@@ -1111,6 +1126,8 @@ pub fn did_join_to_non_literal_self_returns_list_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify the response contains the DID-joined posts as a list
@@ -1247,6 +1264,8 @@ pub fn did_join_batches_queries_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify all posts and their associated profiles appear
@@ -1509,6 +1528,8 @@ pub fn nested_forward_join_resolves_reply_parent_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify the nested forward joins work correctly

@@ -5,6 +5,7 @@
 /// 2. GraphQL schema building with aggregate fields
 /// 3. Aggregated query execution with various parameters
 /// 4. Result formatting and verification
+import auth_types
 import database/executor.{type Executor}
 import database/queries/aggregates
 import database/repositories/lexicons
@@ -304,6 +305,7 @@ pub fn graphql_simple_aggregation_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -351,6 +353,7 @@ pub fn graphql_multi_field_aggregation_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -395,6 +398,7 @@ pub fn graphql_aggregation_with_where_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   let assert wisp.Text(_body_no_where) = response_no_where.body
@@ -425,6 +429,7 @@ pub fn graphql_aggregation_with_where_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   let assert wisp.Text(_body_string) = response_string.body
@@ -456,6 +461,7 @@ pub fn graphql_aggregation_with_where_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -512,6 +518,7 @@ pub fn graphql_aggregation_with_order_by_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -553,6 +560,7 @@ pub fn graphql_aggregation_with_limit_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -594,6 +602,7 @@ pub fn graphql_status_aggregation_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -687,6 +696,7 @@ pub fn graphql_table_column_aggregation_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -730,6 +740,7 @@ pub fn graphql_empty_aggregation_test() {
       None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response (should still be 200 with empty results)

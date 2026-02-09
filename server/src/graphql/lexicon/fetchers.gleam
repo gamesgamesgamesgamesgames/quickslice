@@ -2,7 +2,9 @@
 ///
 /// These functions bridge the database layer to the lexicon_graphql library's
 /// expected fetcher signatures for queries, joins, and aggregations.
+import aip_auth
 import atproto_auth
+import auth_types.{type AuthProvider}
 import database/executor.{type Executor}
 import database/queries/aggregates
 import database/queries/pagination
@@ -427,10 +429,23 @@ pub fn aggregate_fetcher(db: Executor) {
 }
 
 /// Create a viewer fetcher for authenticated user info
-pub fn viewer_fetcher(db: Executor) {
+pub fn viewer_fetcher(db: Executor, auth_provider: AuthProvider) {
   fn(token: String) {
-    case atproto_auth.verify_token(db, token) {
-      Error(_) -> Error("Invalid or expired token")
+    let verify_result = case auth_provider {
+      auth_types.Aip(base_url) -> {
+        case aip_auth.resolve(base_url, token, option.None) {
+          Ok(#(user_info, _)) -> Ok(user_info)
+          Error(_) -> Error("Invalid or expired token")
+        }
+      }
+      auth_types.Internal -> {
+        atproto_auth.verify_token(db, token)
+        |> result.map_error(fn(_) { "Invalid or expired token" })
+      }
+    }
+
+    case verify_result {
+      Error(err) -> Error(err)
       Ok(user_info) -> {
         // Get handle from actors table
         let handle = case actors.get(db, user_info.did) {

@@ -1,3 +1,10 @@
+import aip_auth
+import auth_types.{
+  type AtprotoSession, type AuthError, type AuthProvider, type UserInfo,
+  AtprotoSession, DIDResolutionFailed, InvalidAuthHeader, MissingAuthHeader,
+  RefreshFailed, SessionNotFound, SessionNotReady, TokenExpired,
+  UnauthorizedToken, UserInfo,
+}
 import database/executor.{type Executor}
 import database/repositories/oauth_access_tokens
 import database/repositories/oauth_atp_sessions
@@ -9,30 +16,6 @@ import lib/oauth/atproto/bridge
 import lib/oauth/atproto/did_resolver
 import lib/oauth/did_cache
 import lib/oauth/token_generator
-
-/// UserInfo response from OAuth provider
-pub type UserInfo {
-  UserInfo(sub: String, did: String)
-}
-
-/// ATProto session data from AIP
-pub type AtprotoSession {
-  AtprotoSession(pds_endpoint: String, access_token: String, dpop_jwk: String)
-}
-
-/// Error type for authentication operations
-pub type AuthError {
-  MissingAuthHeader
-  InvalidAuthHeader
-  UnauthorizedToken
-  TokenExpired
-  SessionNotFound
-  SessionNotReady
-  RefreshFailed(String)
-  DIDResolutionFailed(String)
-  NetworkError
-  ParseError
-}
 
 /// Extract bearer token from Authorization header
 ///
@@ -212,5 +195,35 @@ pub fn get_atp_session(
       None -> ""
     },
     dpop_jwk: current_session.dpop_key,
+    aip_signing: option.None,
   ))
+}
+
+/// Resolve authentication and get both UserInfo and AtprotoSession.
+/// Dispatches to internal auth or AIP based on the auth provider config.
+pub fn resolve_auth(
+  conn: Executor,
+  did_cache: Subject(did_cache.Message),
+  token: String,
+  signing_key: Option(String),
+  atp_client_id: String,
+  auth_provider: AuthProvider,
+  delegate_for: Option(String),
+) -> Result(#(UserInfo, AtprotoSession), AuthError) {
+  case auth_provider {
+    auth_types.Internal -> {
+      use user_info <- result.try(verify_token(conn, token))
+      use session <- result.try(get_atp_session(
+        conn,
+        did_cache,
+        token,
+        signing_key,
+        atp_client_id,
+      ))
+      Ok(#(user_info, session))
+    }
+    auth_types.Aip(base_url) -> {
+      aip_auth.resolve(base_url, token, delegate_for)
+    }
+  }
 }

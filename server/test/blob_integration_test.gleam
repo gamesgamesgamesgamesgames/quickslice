@@ -5,6 +5,7 @@
 /// 2. Insert records with blob data in AT Protocol format
 /// 3. Execute GraphQL queries with blob field selection
 /// 4. Verify blob fields are resolved correctly with all sub-fields
+import auth_types
 import database/repositories/lexicons
 import database/repositories/records
 import gleam/http
@@ -127,6 +128,7 @@ pub fn blob_field_query_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -224,6 +226,7 @@ pub fn blob_field_with_different_presets_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   response.status
@@ -296,6 +299,7 @@ pub fn blob_field_default_preset_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   response.status
@@ -360,6 +364,7 @@ pub fn blob_field_null_when_missing_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   response.status

@@ -2,6 +2,7 @@
 ///
 /// This test verifies that DID join fields are properly generated in the GraphQL schema
 /// by running a full introspection query and checking for the expected join fields.
+import auth_types
 import database/executor.{type Executor}
 import database/repositories/lexicons
 import database/repositories/records
@@ -136,6 +137,7 @@ pub fn introspection_query_includes_did_join_fields_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -222,6 +224,7 @@ pub fn introspection_query_profile_join_fields_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -389,6 +392,7 @@ pub fn introspection_query_did_join_field_structure_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -511,6 +515,7 @@ pub fn did_join_field_query_execution_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response

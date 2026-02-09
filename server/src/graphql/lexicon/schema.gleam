@@ -3,6 +3,7 @@
 /// Public API for building and executing the lexicon-driven GraphQL schema.
 /// External code should import this module for all lexicon GraphQL operations.
 import atproto_auth
+import auth_types.{type AuthProvider}
 import backfill
 import database/executor.{type Executor}
 import database/repositories/config as config_repo
@@ -14,7 +15,7 @@ import gleam/dynamic/decode
 import gleam/erlang/process.{type Subject}
 import gleam/json
 import gleam/list
-import gleam/option
+import gleam/option.{type Option}
 import gleam/result
 import gleam/string
 import graphql/admin/types as admin_types
@@ -39,6 +40,7 @@ pub fn build_schema_from_db(
   atp_client_id: String,
   plc_url: String,
   domain_authority: String,
+  auth_provider: AuthProvider,
 ) -> Result(schema.Schema, String) {
   // Step 1: Fetch lexicons from database
   use lexicon_records <- result.try(
@@ -65,7 +67,7 @@ pub fn build_schema_from_db(
       let batch_fetcher = fetchers.batch_fetcher(db)
       let paginated_batch_fetcher = fetchers.paginated_batch_fetcher(db)
       let aggregate_fetcher = fetchers.aggregate_fetcher(db)
-      let viewer_fetcher = fetchers.viewer_fetcher(db)
+      let viewer_fetcher = fetchers.viewer_fetcher(db, auth_provider)
 
       // Step 4: Determine local and external collections for backfill
       let collection_ids =
@@ -100,6 +102,7 @@ pub fn build_schema_from_db(
           plc_url: plc_url,
           collection_ids: collection_ids,
           external_collection_ids: external_collection_ids,
+          auth_provider: auth_provider,
         )
 
       let create_factory =
@@ -274,6 +277,8 @@ pub fn execute_query_with_db(
   signing_key: option.Option(String),
   atp_client_id: String,
   plc_url: String,
+  auth_provider: AuthProvider,
+  delegate_for: Option(String),
 ) -> Result(String, String) {
   // Get domain authority from database
   let domain_authority = case config_repo.get(db, "domain_authority") {
@@ -289,6 +294,7 @@ pub fn execute_query_with_db(
     atp_client_id,
     plc_url,
     domain_authority,
+    auth_provider,
   ))
 
   // Convert json variables to Dict(String, value.Value)
@@ -302,7 +308,33 @@ pub fn execute_query_with_db(
   // overwritten with parent values during field resolution
   let #(ctx_data, variables_with_viewer) = case auth_token {
     Ok(token) -> {
-      case atproto_auth.verify_token(db, token) {
+      // For AIP auth, use resolve_auth to verify; for internal, use verify_token
+      let verify_result = case auth_provider {
+        auth_types.Aip(base_url) -> {
+          case
+            atproto_auth.resolve_auth(
+              db,
+              did_cache,
+              token,
+              signing_key,
+              atp_client_id,
+              auth_types.Aip(base_url),
+              delegate_for,
+            )
+          {
+            Ok(#(user_info, _)) -> Ok(user_info)
+            Error(_) -> Error(Nil)
+          }
+        }
+        auth_types.Internal -> {
+          case atproto_auth.verify_token(db, token) {
+            Ok(user_info) -> Ok(user_info)
+            Error(_) -> Error(Nil)
+          }
+        }
+      }
+
+      case verify_result {
         Ok(user_info) -> {
           // Add viewer_did to variables for viewer state fields
           let vars_with_viewer =
@@ -311,9 +343,16 @@ pub fn execute_query_with_db(
               "viewer_did",
               value.String(user_info.did),
             )
-          // Keep auth_token in ctx.data for mutation resolvers
-          let data =
-            option.Some(value.Object([#("auth_token", value.String(token))]))
+          // Keep auth_token and delegate_for in ctx.data for mutation resolvers
+          let data_fields = [#("auth_token", value.String(token))]
+          let data_fields = case delegate_for {
+            option.Some(did) -> [
+              #("delegate_for", value.String(did)),
+              ..data_fields
+            ]
+            option.None -> data_fields
+          }
+          let data = option.Some(value.Object(data_fields))
           #(data, vars_with_viewer)
         }
         Error(_) -> {

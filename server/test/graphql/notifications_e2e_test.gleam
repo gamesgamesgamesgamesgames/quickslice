@@ -5,6 +5,7 @@
 /// - Self-authored records are excluded
 /// - Collection filtering works correctly
 /// - Union type resolution works across different record types
+import auth_types
 import database/repositories/actors
 import database/repositories/lexicons
 import database/repositories/records
@@ -271,6 +272,8 @@ pub fn notifications_returns_mentioning_records_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Verify union type resolution returns concrete types
@@ -371,6 +374,8 @@ pub fn notifications_filters_by_collection_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Should have the like with correct type
@@ -446,6 +451,8 @@ pub fn notifications_excludes_self_authored_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
+      option.None,
     )
 
   // Should have empty edges since self-authored is excluded

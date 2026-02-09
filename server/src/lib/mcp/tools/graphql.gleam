@@ -1,3 +1,4 @@
+import auth_types
 import database/executor.{type Executor}
 import gleam/erlang/process.{type Subject}
 import gleam/json
@@ -26,6 +27,8 @@ pub fn execute_query(
     "",
     // Empty atp_client_id - MCP queries don't do mutations that need ATP refresh
     plc_url,
+    auth_types.Internal,
+    option.None,
   ))
 
   // Return the result string wrapped in a JSON object

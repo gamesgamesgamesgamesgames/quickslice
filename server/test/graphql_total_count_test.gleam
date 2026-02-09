@@ -1,6 +1,7 @@
 /// Integration tests for GraphQL totalCount field
 ///
 /// These tests verify that totalCount is correctly returned in connection queries
+import auth_types
 import database/repositories/actors
 import database/repositories/lexicons
 import database/repositories/records
@@ -146,6 +147,7 @@ pub fn graphql_total_count_basic_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -253,6 +255,7 @@ pub fn graphql_total_count_with_filter_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -314,6 +317,7 @@ pub fn graphql_total_count_empty_result_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
@@ -388,6 +392,7 @@ pub fn graphql_total_count_with_pagination_test() {
       option.None,
       "",
       "https://plc.directory",
+      auth_types.Internal,
     )
 
   // Verify response
