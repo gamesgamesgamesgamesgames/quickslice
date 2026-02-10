@@ -82,7 +82,7 @@ fn handle_graphql_post(
   delegate_for: Option(String),
 ) -> wisp.Response {
   // Try to get auth token, checking cookie-based auth first, then Authorization header
-  let auth_token = get_auth_token(req, db)
+  let auth_token = get_auth_token(req, db, auth_provider)
 
   // Read request body
   case wisp.read_body_bits(req) {
@@ -126,7 +126,7 @@ fn handle_graphql_get(
   delegate_for: Option(String),
 ) -> wisp.Response {
   // Try to get auth token, checking cookie-based auth first, then Authorization header
-  let auth_token = get_auth_token(req, db)
+  let auth_token = get_auth_token(req, db, auth_provider)
 
   // Support GET requests with query parameter (no variables for GET)
   let query_params = wisp.get_query(req)
@@ -203,9 +203,19 @@ fn extract_request_from_json(
 /// Auth methods checked in order:
 /// 1. Cookie (quickslice_client_session) - for JS SDK v2+ with cookie auth
 /// 2. Authorization header (DPoP or Bearer) - for backward compatibility
-fn get_auth_token(req: wisp.Request, db: Executor) -> Result(String, Nil) {
+fn get_auth_token(
+  req: wisp.Request,
+  db: Executor,
+  auth_provider: AuthProvider,
+) -> Result(String, Nil) {
   // First, try cookie-based authentication
-  case client_session.get_session_access_token(req, db) {
+  // When using AIP, use the AIP-issued ATP access token instead of the Quickslice OAuth token
+  let cookie_result = case auth_provider {
+    auth_types.Aip(_) -> client_session.get_session_atp_access_token(req, db)
+    auth_types.Internal -> client_session.get_session_access_token(req, db)
+  }
+
+  case cookie_result {
     Ok(token) -> Ok(token)
     Error(_) -> {
       // Fall back to Authorization header

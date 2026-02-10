@@ -6,6 +6,7 @@ import database/executor.{type Executor}
 import database/repositories/client_session as client_session_repo
 import database/repositories/config as config_repo
 import database/repositories/oauth_access_tokens
+import database/repositories/oauth_atp_sessions
 import gleam/bit_array
 import gleam/crypto
 import gleam/erlang/process.{type Subject}
@@ -160,6 +161,42 @@ pub fn get_session_access_token(
 
   case access_token_opt {
     Some(token) -> Ok(token.token)
+    None -> Error(Nil)
+  }
+}
+
+/// Get the current session's AIP-issued ATP access token
+/// Used when AUTH_PROVIDER=aip to send the token AIP actually recognizes
+pub fn get_session_atp_access_token(
+  req: Request,
+  db: Executor,
+) -> Result(String, Nil) {
+  use session_id <- result.try(get_session_id(req))
+  use session_opt <- result.try(
+    client_session_repo.get(db, session_id) |> result.replace_error(Nil),
+  )
+  use session <- result.try(case session_opt {
+    Some(s) -> Ok(s)
+    None -> Error(Nil)
+  })
+
+  // Must have an ATP session ID to get tokens
+  use atp_session_id <- result.try(case session.atp_session_id {
+    Some(id) -> Ok(id)
+    None -> Error(Nil)
+  })
+
+  // Look up the AIP-issued ATP access token
+  let atp_session_opt =
+    oauth_atp_sessions.get_latest(db, atp_session_id)
+    |> result.unwrap(None)
+
+  case atp_session_opt {
+    Some(atp_session) ->
+      case atp_session.access_token {
+        Some(token) -> Ok(token)
+        None -> Error(Nil)
+      }
     None -> Error(Nil)
   }
 }
