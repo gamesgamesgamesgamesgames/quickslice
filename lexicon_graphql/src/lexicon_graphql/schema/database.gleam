@@ -122,9 +122,9 @@ pub type AggregateFetcher =
   fn(String, AggregateParams) ->
     Result(List(aggregate_types.AggregateResult), String)
 
-/// Fetches viewer info (did, handle) from auth token
+/// Resolves a handle from a DID for the viewer query
 pub type ViewerFetcher =
-  fn(String) -> Result(#(String, option.Option(String)), String)
+  fn(String) -> Result(option.Option(String), String)
 
 /// Type for notification fetcher function
 /// Takes: did, optional collection filter, first (limit), after (cursor)
@@ -2191,30 +2191,21 @@ fn build_query_type(
           viewer_type,
           "The currently authenticated user, or null if not authenticated",
           fn(ctx) {
-            // Extract auth_token from context
-            case ctx.data {
-              option.Some(value.Object(fields)) ->
-                case list.key_find(fields, "auth_token") {
-                  Ok(value.String(token)) -> {
-                    case vf(token) {
-                      Ok(#(did, handle_opt)) -> {
-                        let handle_value = case handle_opt {
-                          option.Some(h) -> value.String(h)
-                          option.None -> value.Null
-                        }
-                        Ok(
-                          value.Object([
-                            #("did", value.String(did)),
-                            #("handle", handle_value),
-                          ]),
-                        )
-                      }
-                      Error(_) -> Ok(value.Null)
-                    }
-                  }
-                  _ -> Ok(value.Null)
+            // Read viewer_did from context variables (already verified by server auth)
+            case get_viewer_did_from_context(ctx) {
+              Ok(did) -> {
+                let handle_value = case vf(did) {
+                  Ok(option.Some(h)) -> value.String(h)
+                  _ -> value.Null
                 }
-              _ -> Ok(value.Null)
+                Ok(
+                  value.Object([
+                    #("did", value.String(did)),
+                    #("handle", handle_value),
+                  ]),
+                )
+              }
+              Error(_) -> Ok(value.Null)
             }
           },
         ),

@@ -2,8 +2,6 @@
 ///
 /// These functions bridge the database layer to the lexicon_graphql library's
 /// expected fetcher signatures for queries, joins, and aggregations.
-import aip_auth
-import atproto_auth
 import auth_types.{type AuthProvider}
 import database/executor.{type Executor}
 import database/queries/aggregates
@@ -428,33 +426,16 @@ pub fn aggregate_fetcher(db: Executor) {
   }
 }
 
-/// Create a viewer fetcher for authenticated user info
-pub fn viewer_fetcher(db: Executor, auth_provider: AuthProvider) {
-  fn(token: String) {
-    let verify_result = case auth_provider {
-      auth_types.Aip(base_url) -> {
-        case aip_auth.resolve(base_url, token, option.None) {
-          Ok(#(user_info, _)) -> Ok(user_info)
-          Error(_) -> Error("Invalid or expired token")
-        }
-      }
-      auth_types.Internal -> {
-        atproto_auth.verify_token(db, token)
-        |> result.map_error(fn(_) { "Invalid or expired token" })
-      }
+/// Create a viewer fetcher that resolves a handle from a DID
+/// The DID has already been verified by the server auth middleware;
+/// this just looks up the handle from the actors table.
+pub fn viewer_fetcher(db: Executor, _auth_provider: AuthProvider) {
+  fn(did: String) {
+    let handle = case actors.get(db, did) {
+      Ok([actor, ..]) -> option.Some(actor.handle)
+      _ -> option.None
     }
-
-    case verify_result {
-      Error(err) -> Error(err)
-      Ok(user_info) -> {
-        // Get handle from actors table
-        let handle = case actors.get(db, user_info.did) {
-          Ok([actor, ..]) -> option.Some(actor.handle)
-          _ -> option.None
-        }
-        Ok(#(user_info.did, handle))
-      }
-    }
+    Ok(handle)
   }
 }
 
