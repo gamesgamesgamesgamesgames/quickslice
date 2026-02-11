@@ -308,30 +308,11 @@ pub fn execute_query_with_db(
   // overwritten with parent values during field resolution
   let #(ctx_data, variables_with_viewer) = case auth_token {
     Ok(token) -> {
-      // For AIP auth, use resolve_auth to verify; for internal, use verify_token
-      let verify_result = case auth_provider {
-        auth_types.Aip(base_url) -> {
-          case
-            atproto_auth.resolve_auth(
-              db,
-              did_cache,
-              token,
-              signing_key,
-              atp_client_id,
-              auth_types.Aip(base_url),
-              delegate_for,
-            )
-          {
-            Ok(#(user_info, _)) -> Ok(user_info)
-            Error(_) -> Error(Nil)
-          }
-        }
-        auth_types.Internal -> {
-          case atproto_auth.verify_token(db, token) {
-            Ok(user_info) -> Ok(user_info)
-            Error(_) -> Error(Nil)
-          }
-        }
+      // Always verify against local DB — the Quickslice OAuth token is always
+      // present with the user's DID, regardless of auth provider
+      let verify_result = case atproto_auth.verify_token(db, token) {
+        Ok(user_info) -> Ok(user_info)
+        Error(_) -> Error(Nil)
       }
 
       case verify_result {
