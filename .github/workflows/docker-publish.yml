@@ -133,6 +133,8 @@ jobs:
         run: |
           GHCR_TAGS=$(jq -cr '.tags | map(select(startswith("ghcr.io"))) | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON")
           docker buildx imagetools create --append $GHCR_TAGS \
+            ${{ env.GHCR_IMAGE }}@${{ steps.build.outputs.digest }} 2>/dev/null || \
+          docker buildx imagetools create $GHCR_TAGS \
             ${{ env.GHCR_IMAGE }}@${{ steps.build.outputs.digest }}
 
       - name: Create ATCR manifest
@@ -140,5 +142,7 @@ jobs:
           ATCR_TAGS=$(jq -cr '.tags | map(select(startswith("atcr.io"))) | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON")
           if [ -n "$ATCR_TAGS" ]; then
             docker buildx imagetools create --append $ATCR_TAGS \
+              ${{ env.ATCR_IMAGE }}@${{ steps.build.outputs.digest }} 2>/dev/null || \
+            docker buildx imagetools create $ATCR_TAGS \
               ${{ env.ATCR_IMAGE }}@${{ steps.build.outputs.digest }}
           fi
