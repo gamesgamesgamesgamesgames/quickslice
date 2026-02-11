@@ -13,9 +13,10 @@ import database/repositories/actors
 import database/repositories/lexicons
 import gleam/http
 import gleam/json
-import gleam/option.{None}
+import gleam/option.{None, Some}
 import gleam/string
 import gleeunit/should
+import graphql/lexicon/schema as lexicon_schema
 import handlers/graphql as graphql_handler
 import lib/oauth/did_cache
 import test_helpers
@@ -235,4 +236,54 @@ pub fn viewer_query_returns_did_and_handle_with_internal_auth_test() {
 
   // Viewer should contain the handle
   string.contains(body, "internaluser.test") |> should.be_true
+}
+
+/// Test: viewer resolves from session DID when token is expired/missing
+///
+/// This simulates the production scenario where the OAuth access token has
+/// expired (1 hour lifetime) but the session cookie is still valid (14 days).
+/// The viewer query should still return the user's DID by falling back to
+/// the session DID passed via the viewer_did parameter.
+pub fn viewer_resolves_from_session_did_when_token_expired_test() {
+  // Setup database
+  let assert Ok(exec) = test_helpers.create_test_db()
+  let assert Ok(_) = test_helpers.create_lexicon_table(exec)
+  let assert Ok(_) = test_helpers.create_record_table(exec)
+  let assert Ok(_) = test_helpers.create_config_table(exec)
+  let assert Ok(_) = test_helpers.create_actor_table(exec)
+  let assert Ok(_) = test_helpers.create_oauth_tables(exec)
+
+  // Insert actor (but NO valid token — simulating expiration)
+  let assert Ok(_) =
+    actors.upsert(exec, "did:plc:sessionuser", "sessionuser.test")
+
+  // Insert a lexicon so the schema can be built
+  let assert Ok(_) =
+    lexicons.insert(exec, "test.aip.item", create_minimal_lexicon())
+
+  let assert Ok(cache) = did_cache.start()
+
+  // Call execute_query_with_db directly:
+  // - auth_token: Error(Nil) — token expired/unavailable
+  // - viewer_did: Some("did:plc:sessionuser") — session DID still valid
+  let assert Ok(response_json) =
+    lexicon_schema.execute_query_with_db(
+      exec,
+      "{ viewer { did handle } }",
+      "{}",
+      Error(Nil),
+      Some("did:plc:sessionuser"),
+      cache,
+      None,
+      "",
+      "https://plc.directory",
+      auth_types.Aip("http://localhost:9999"),
+      None,
+    )
+
+  // Viewer should contain the DID from the session
+  string.contains(response_json, "did:plc:sessionuser") |> should.be_true
+
+  // Viewer should contain the handle resolved from the actor table
+  string.contains(response_json, "sessionuser.test") |> should.be_true
 }

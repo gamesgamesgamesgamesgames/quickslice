@@ -273,6 +273,7 @@ pub fn execute_query_with_db(
   query_string: String,
   variables_json_str: String,
   auth_token: Result(String, Nil),
+  viewer_did: Option(String),
   did_cache: Subject(did_cache.Message),
   signing_key: option.Option(String),
   atp_client_id: String,
@@ -306,6 +307,11 @@ pub fn execute_query_with_db(
   // Extract viewer DID from auth token and add to variables
   // This is stored in variables (not ctx.data) because ctx.data gets
   // overwritten with parent values during field resolution
+  //
+  // Two separate concerns:
+  // - viewer_did for variables: comes from token verification, with fallback
+  //   to session DID (always available within 14-day cookie window)
+  // - auth_token in ctx.data: still comes from token verification (needed for mutations)
   let #(ctx_data, variables_with_viewer) = case auth_token {
     Ok(token) -> {
       // Always verify against local DB — the Quickslice OAuth token is always
@@ -337,12 +343,38 @@ pub fn execute_query_with_db(
           #(data, vars_with_viewer)
         }
         Error(_) -> {
-          // Token invalid/expired - allow query but without viewer context
-          #(option.None, variables_dict)
+          // Token invalid/expired — fall back to session DID for viewer queries
+          // (mutations still require a valid token via ctx.data)
+          case viewer_did {
+            option.Some(did) -> {
+              let vars_with_viewer =
+                dict.insert(
+                  variables_dict,
+                  "viewer_did",
+                  value.String(did),
+                )
+              #(option.None, vars_with_viewer)
+            }
+            option.None -> #(option.None, variables_dict)
+          }
         }
       }
     }
-    Error(_) -> #(option.None, variables_dict)
+    Error(_) -> {
+      // No token at all — fall back to session DID for viewer queries
+      case viewer_did {
+        option.Some(did) -> {
+          let vars_with_viewer =
+            dict.insert(
+              variables_dict,
+              "viewer_did",
+              value.String(did),
+            )
+          #(option.None, vars_with_viewer)
+        }
+        option.None -> #(option.None, variables_dict)
+      }
+    }
   }
 
   let ctx = schema.context_with_variables(ctx_data, variables_with_viewer)

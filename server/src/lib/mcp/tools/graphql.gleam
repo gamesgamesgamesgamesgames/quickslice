@@ -22,6 +22,8 @@ pub fn execute_query(
     variables_json,
     Error(Nil),
     // No auth token for MCP queries
+    option.None,
+    // No session DID for MCP queries
     did_cache,
     signing_key,
     "",

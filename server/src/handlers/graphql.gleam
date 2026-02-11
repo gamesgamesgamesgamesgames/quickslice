@@ -84,6 +84,9 @@ fn handle_graphql_post(
   // Try to get auth token, checking cookie-based auth first, then Authorization header
   let auth_token = get_auth_token(req, db)
 
+  // Get viewer DID from session cookie (survives token expiration)
+  let viewer_did = get_viewer_did(req, db)
+
   // Read request body
   case wisp.read_body_bits(req) {
     Ok(body) -> {
@@ -97,6 +100,7 @@ fn handle_graphql_post(
                 query,
                 variables,
                 auth_token,
+                viewer_did,
                 did_cache,
                 signing_key,
                 atp_client_id,
@@ -128,6 +132,9 @@ fn handle_graphql_get(
   // Try to get auth token, checking cookie-based auth first, then Authorization header
   let auth_token = get_auth_token(req, db)
 
+  // Get viewer DID from session cookie (survives token expiration)
+  let viewer_did = get_viewer_did(req, db)
+
   // Support GET requests with query parameter (no variables for GET)
   let query_params = wisp.get_query(req)
   case list.key_find(query_params, "query") {
@@ -137,6 +144,7 @@ fn handle_graphql_get(
         query,
         "{}",
         auth_token,
+        viewer_did,
         did_cache,
         signing_key,
         atp_client_id,
@@ -153,6 +161,7 @@ fn execute_graphql_query(
   query: String,
   variables_json_str: String,
   auth_token: Result(String, Nil),
+  viewer_did: Option(String),
   did_cache: Subject(did_cache.Message),
   signing_key: option.Option(String),
   atp_client_id: String,
@@ -167,6 +176,7 @@ fn execute_graphql_query(
       query,
       variables_json_str,
       auth_token,
+      viewer_did,
       did_cache,
       signing_key,
       atp_client_id,
@@ -196,6 +206,19 @@ fn extract_request_from_json(
 
   // Pass the original JSON string so the executor can extract variables
   Ok(#(query, json_str))
+}
+
+/// Get viewer DID from session cookie
+/// The session DID is set by trusted server code during OAuth callback
+/// and survives token expiration (sessions last 14 days vs 1 hour for tokens)
+fn get_viewer_did(
+  req: wisp.Request,
+  db: Executor,
+) -> Option(String) {
+  case client_session.get_session_viewer_did(req, db) {
+    Ok(did) -> Some(did)
+    Error(_) -> None
+  }
 }
 
 /// Get auth token from request, trying cookie-based auth first, then Authorization header

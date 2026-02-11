@@ -97,6 +97,29 @@ pub fn clear_session_cookie(response: Response, req: Request) -> Response {
   wisp.set_cookie(response, req, session_cookie_name, "", wisp.Signed, 0)
 }
 
+/// Get the viewer DID from the current session cookie
+/// Returns the user_did stored in the client_session table if the session
+/// is valid and authenticated. Unlike get_session_info, this does not
+/// resolve handles or require did_cache — it just returns the trusted DID.
+pub fn get_session_viewer_did(
+  req: Request,
+  db: Executor,
+) -> Result(String, Nil) {
+  use session_id <- result.try(get_session_id(req))
+  use session_opt <- result.try(
+    client_session_repo.get(db, session_id) |> result.replace_error(Nil),
+  )
+  use session <- result.try(case session_opt {
+    Some(s) -> Ok(s)
+    None -> Error(Nil)
+  })
+
+  case session.user_did {
+    Some(did) -> Ok(did)
+    None -> Error(Nil)
+  }
+}
+
 /// Get session info for the current request
 /// Returns session data if valid session cookie exists
 pub fn get_session_info(
