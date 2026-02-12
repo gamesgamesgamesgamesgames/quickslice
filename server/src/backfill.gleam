@@ -324,6 +324,8 @@ fn backfill_repo_car_with_context(
   conn: Executor,
   validation_ctx: Option(honk.ValidationContext),
 ) -> Int {
+  // Max CAR file size: 50MB. Repos larger than this are skipped to avoid OOM.
+  let max_car_size = 50_000_000
   let total_start = monotonic_now()
 
   // Phase 1: Fetch
@@ -333,84 +335,101 @@ fn backfill_repo_car_with_context(
       let fetch_ms = elapsed_ms(fetch_start)
       let car_size = bit_array.byte_size(car_bytes)
 
-      // Phase 2: Parse CAR and walk MST
-      let parse_start = monotonic_now()
-      case atproto_car.extract_records_with_paths(car_bytes, collections) {
-        Ok(car_records) -> {
-          let parse_ms = elapsed_ms(parse_start)
-
-          // Phase 3: Convert and validate
-          let validate_start = monotonic_now()
-          let #(db_records, invalid_count) =
-            car_records
-            |> list.fold(#([], 0), fn(acc, r) {
-              let #(records, invalids) = acc
-              let db_record = car_record_with_path_to_db_record(r, did)
-              case validation_ctx {
-                None -> #([db_record, ..records], invalids)
-                Some(ctx) -> {
-                  case validate_record(ctx, r.collection, db_record.json) {
-                    Valid -> #([db_record, ..records], invalids)
-                    ParseError(_) -> #([db_record, ..records], invalids)
-                    Invalid(msg) -> {
-                      logging.log(
-                        logging.Debug,
-                        "[backfill] Invalid record "
-                          <> r.collection
-                          <> "/"
-                          <> r.rkey
-                          <> ": "
-                          <> msg,
-                      )
-                      #(records, invalids + 1)
-                    }
-                  }
-                }
-              }
-            })
-          let validate_ms = elapsed_ms(validate_start)
-
-          // Phase 4: Insert into database
-          let insert_start = monotonic_now()
-          index_records(db_records, conn)
-          let insert_ms = elapsed_ms(insert_start)
-
-          let count = list.length(db_records)
-          let total_ms = elapsed_ms(total_start)
-
-          // Log summary at debug level (detailed per-repo timing)
-          logging.log(
-            logging.Debug,
-            "[backfill] "
-              <> did
-              <> " fetch="
-              <> int.to_string(fetch_ms)
-              <> "ms parse="
-              <> int.to_string(parse_ms)
-              <> "ms validate="
-              <> int.to_string(validate_ms)
-              <> "ms insert="
-              <> int.to_string(insert_ms)
-              <> "ms total="
-              <> int.to_string(total_ms)
-              <> "ms records="
-              <> int.to_string(count)
-              <> " invalid="
-              <> int.to_string(invalid_count)
-              <> " size="
-              <> int.to_string(car_size),
-          )
-          count
-        }
-        Error(err) -> {
+      case car_size > max_car_size {
+        True -> {
           logging.log(
             logging.Warning,
-            "[backfill] CAR parse error for "
+            "[backfill] Skipping repo for "
               <> did
-              <> ": "
-              <> string.inspect(err),
+              <> ": CAR file too large ("
+              <> int.to_string(car_size / 1_000_000)
+              <> "MB, limit "
+              <> int.to_string(max_car_size / 1_000_000)
+              <> "MB)",
           )
           0
+        }
+        False -> {
+          // Phase 2: Parse CAR and walk MST
+          let parse_start = monotonic_now()
+          case atproto_car.extract_records_with_paths(car_bytes, collections) {
+            Ok(car_records) -> {
+              let parse_ms = elapsed_ms(parse_start)
+
+              // Phase 3: Convert and validate
+              let validate_start = monotonic_now()
+              let #(db_records, invalid_count) =
+                car_records
+                |> list.fold(#([], 0), fn(acc, r) {
+                  let #(records, invalids) = acc
+                  let db_record = car_record_with_path_to_db_record(r, did)
+                  case validation_ctx {
+                    None -> #([db_record, ..records], invalids)
+                    Some(ctx) -> {
+                      case validate_record(ctx, r.collection, db_record.json) {
+                        Valid -> #([db_record, ..records], invalids)
+                        ParseError(_) -> #([db_record, ..records], invalids)
+                        Invalid(msg) -> {
+                          logging.log(
+                            logging.Debug,
+                            "[backfill] Invalid record "
+                              <> r.collection
+                              <> "/"
+                              <> r.rkey
+                              <> ": "
+                              <> msg,
+                          )
+                          #(records, invalids + 1)
+                        }
+                      }
+                    }
+                  }
+                })
+              let validate_ms = elapsed_ms(validate_start)
+
+              // Phase 4: Insert into database
+              let insert_start = monotonic_now()
+              index_records(db_records, conn)
+              let insert_ms = elapsed_ms(insert_start)
+
+              let count = list.length(db_records)
+              let total_ms = elapsed_ms(total_start)
+
+              // Log summary at debug level (detailed per-repo timing)
+              logging.log(
+                logging.Debug,
+                "[backfill] "
+                  <> did
+                  <> " fetch="
+                  <> int.to_string(fetch_ms)
+                  <> "ms parse="
+                  <> int.to_string(parse_ms)
+                  <> "ms validate="
+                  <> int.to_string(validate_ms)
+                  <> "ms insert="
+                  <> int.to_string(insert_ms)
+                  <> "ms total="
+                  <> int.to_string(total_ms)
+                  <> "ms records="
+                  <> int.to_string(count)
+                  <> " invalid="
+                  <> int.to_string(invalid_count)
+                  <> " size="
+                  <> int.to_string(car_size),
+              )
+              count
+            }
+            Error(err) -> {
+              logging.log(
+                logging.Warning,
+                "[backfill] CAR parse error for "
+                  <> did
+                  <> ": "
+                  <> string.inspect(err),
+              )
+              0
+            }
+          }
         }
       }
     }

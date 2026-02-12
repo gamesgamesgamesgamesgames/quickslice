@@ -169,7 +169,7 @@ fn handle_callback(
               )
             }
             Ok(updated_session) -> {
-              // Sync actor on first login (blocking)
+              // Sync actor on first login (async to avoid OOM on large repos)
               case updated_session.did {
                 Some(did) -> {
                   let plc_url = config_repo.get_plc_directory_url(conn)
@@ -178,19 +178,23 @@ fn handle_callback(
 
                   case actor_validator.ensure_actor_exists(conn, did, plc_url) {
                     Ok(True) -> {
-                      // New actor - backfill collections synchronously
+                      // New actor - backfill in background process
                       logging.log(
                         logging.Info,
-                        "[oauth] Syncing new actor: " <> did,
+                        "[oauth] Syncing new actor (async): " <> did,
                       )
-                      let _ =
-                        backfill.backfill_collections_for_actor(
-                          conn,
-                          did,
-                          collection_ids,
-                          external_collection_ids,
-                          plc_url,
-                        )
+                      let _pid =
+                        process.spawn_unlinked(fn() {
+                          let _ =
+                            backfill.backfill_collections_for_actor(
+                              conn,
+                              did,
+                              collection_ids,
+                              external_collection_ids,
+                              plc_url,
+                            )
+                          Nil
+                        })
                       Nil
                     }
                     Ok(False) -> Nil
